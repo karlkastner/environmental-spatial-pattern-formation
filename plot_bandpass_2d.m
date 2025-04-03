@@ -50,6 +50,7 @@ function plot_bandpass_2d(meta)
 	p = 2;
 	
 	b_thresh = 0.8;
+	p_thresh_ = [0.2,0.5,0.8];
 
 	% initialize random number generator (for reproducibility)
 	rng(1);
@@ -72,9 +73,10 @@ function plot_bandpass_2d(meta)
 	% create plots for vayring degrees of regularity
 	for idx=1:length(reg)
 		% reg = Sc/lc = Sc*fc -> Sc = reg/fc
-		p2d = bandpass2d_continuous_pdf_mode2par(fc,reg(idx)/fc);
+		[p2d(1),p2d(2)] = bandpass2d_continuous_pdf_mode2par(fc,reg(idx)/fc);
 		printf('f0/fc %f fc %f Sc %f p_2d %f %f\n',p2d(1)/fc,fc,reg(idx)/fc,p2d);
 		if (1)
+		               %                         L,n,Lf,p,q
 			S2dp = bandpass2d_discrete_pdf([L,L],[n,n],1./p2d(1)*[1,1],p2d(2));
 		%1./[fc,fc]/(2*pi/0.75),1);
 		else
@@ -95,11 +97,12 @@ function plot_bandpass_2d(meta)
 
 		% Transfer function
 		T = sqrt(S2dp);
+
 		% generate a pattern with the same specttral density by filtering
 		b = real(ifft2(T.*e));
 	
 		% autocorrelation function
-		R2d = ifft2(S2dp); %Sr1_);
+		R2d = ifft2(S2dp);
 		R2d = R2d/R2d(1);
 		%R = R/R(1);
 		Rr = R2d(1,:);
@@ -118,10 +121,40 @@ function plot_bandpass_2d(meta)
 		axis([0,1,0,1]*Lp)
 		colormap(gray)
 		title(sprintf('$S_{rc}/\\lambda_c = %g$',roundn(reg(idx),2)),'interpreter','latex');
-		xlabel('x/\lambda_c');
-		ylabel('y/\lambda_c');
+		xlabel('Position $x/\lambda_c$','interpreter','latex');
+		ylabel('Position $y/\lambda_c$','interpreter','latex');
 		colormap(fcmap(356));
+
+		b_thresh_ = quantile(b(:),p_thresh_);	
+		splitfigure([3,5],[1,1+5*(idx-1)],fflag,'',100);
+		imagesc(x*fc,x*fc,b);
+		axis square
+		colormap(fcmap(356));
+		axis([0,1,0,1]*Lp)
+		axis off
 		
+		for jdx=1:length(b_thresh_)
+			b_bw_ = b>b_thresh_(jdx);
+			splitfigure([3,5],[1,jdx+1+5*(idx-1)],fflag,'',100);
+			imagesc(x*fc,x*fc,b_bw_);
+			axis square
+			colormap(fcmap(356));
+			axis([0,1,0,1]*Lp)
+			axis off
+		end
+		
+		jdx = 4;
+		splitfigure([3,5],[1,jdx+1+5*(idx-1)],fflag,'',100);
+		dp = 0.09;
+		b_thresh_ = quantile(b,0.8+dp*[-1,1],'all');
+		b_bw_ = (b>b_thresh_(1)) & (b<b_thresh_(2));
+
+		imagesc(x*fc,x*fc,b_bw_);
+		axis square
+		colormap(fcmap(356));
+		axis([0,1,0,1]*Lp)
+		axis off
+	
 		% plot th2 2D spectral density
 		splitfigure([2,3],[1,3+idx], fflag);
 		cla
@@ -187,13 +220,24 @@ function plot_bandpass_2d(meta)
 	if (pflag)
 %		aspect = 1;
 		aspect = [];
+	if (1)
 		for idx=1:length(reg)
 			pdfprint(10+idx,sprintf('img/bandpass-2d-pattern-Sc-%0.2f.pdf',reg(idx)),ps,aspect);
 %			pdfprint(12,'img/bandpass-2d-pattern-Sc-0.5.pdf',ps,aspect);
 %			pdfprint(13,'img/bandpass-2d-pattern-Sc-1.0.pdf',ps,aspect);
 		end
-		pdfprint(21,'img/bandpass-2d-radial-density.pdf',ps,aspect);
-		pdfprint(22,'img/bandpass-2d-radial-acf.pdf',ps,aspect);
+%		pdfprint(21,'img/bandpass-2d-radial-density.pdf',ps,aspect);
+%		pdfprint(22,'img/bandpass-2d-radial-acf.pdf',ps,aspect);
+	end
+if (0)
+		for idx=1:length(reg)
+			pdfprint(101 + 5*(idx-1),sprintf('img/bandpass-2d-pattern-reg-%0.2f-generic.pdf',reg(idx)),ps,aspect);
+		for jdx=1:length(p_thresh_)
+			pdfprint(101 + 5*(idx-1) + jdx,sprintf('img/bandpass-2d-pattern-reg-%0.2f-p-%0.2f.pdf',reg(idx),p_thresh_(jdx)),ps,aspect);
+		end
+			pdfprint(100 + 5*(idx),sprintf('img/bandpass-2d-pattern-reg-%0.2f-ringed.pdf',reg(idx)),ps,aspect);
+		end
+end
 	end % if pflag
 end % plot_bandpass_2d
 

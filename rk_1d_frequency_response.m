@@ -48,13 +48,13 @@ function [rk,bb,c] = rk_1d_frequency_response(meta)
 	dt  = 0.5;
 
 	% frequencies at which pattern is plotted
-	f0 = [0.5,1,2];
+	% note: this is actually f0_div_fc
+	f0 = [0.5,1,2.0];
 
 	% local frequency
 	k = 20;
 	r = 1-1/8;
-	f  = 12*r.^(0:k/r)';
-	f = f*2;
+	f  = 24*r.^(0:k/r)';
 	F_ = scale*[0;cumsum(f)];
 	F = mid(F_);
 
@@ -64,7 +64,8 @@ function [rk,bb,c] = rk_1d_frequency_response(meta)
 	n  = 0.5*nx+1;
 	n_ = length(F);
 	F  = interp1((1:n_)/(n_+1),F,(0:n-1)/(n-1),'spline')';
-	df_dx = cdiff(F)./dx;
+	% this is actually f
+	dF_dx = cdiff(F)./dx;
 	% local bare soil infiltration
 	ea  = sin(2*pi*(F-F(1)));
 
@@ -72,7 +73,7 @@ function [rk,bb,c] = rk_1d_frequency_response(meta)
 	% so we ramp it up and down to make it symmetric
 	ea = [ea;-flipud(ea(2:end-1))];
 	a = a0*(1 + s_a*ea);  
-	df_dx_ = [df_dx;-flipud(df_dx(2:end-1,:))];
+	dF_dx_ = [dF_dx;-flipud(dF_dx(2:end-1,:))];
 	
 	% model parameters
 	param        = struct();
@@ -93,8 +94,11 @@ function [rk,bb,c] = rk_1d_frequency_response(meta)
 	param.opt.dto = dto;
 	param.pss.a  = 0;
 	param.opt.compute_class = @single;
+	param.opt.output_class = @single;
 	param.opt.path_str = 'mat/';
 	param.pmu.a = a;
+	param.opt.solver = 'solve_split';
+	param.opt.inner_solver = 'step_advect_diffuse_spectral';
 
 	% initial condition
 	rk = Rietkerk(param);
@@ -148,24 +152,27 @@ function [rk,bb,c] = rk_1d_frequency_response(meta)
 	set(gca,'colororder',[0,0,0;1 0 0])  
 	yyaxis right
 	cla
-	plot(rk.x,df_dx_);
+	plot(rk.x,dF_dx_);
 	hline(fc)
 
 	% plot goodness of fit (correlation^2)
 	splitfigure([2,3],[1,2],fflag);
+	r2 = (c(1:nx,3)).^2;
+	r2_f0 = interp1(dF_dx_/fc,r2,f0,'linear');
 	if (~pflag)
-		plot(df_dx_(1:nx)/fc,(c(1:nx,:)).^2,'linewidth',1)
+		plot(dF_dx_(1:nx)/fc,(c(1:nx,:)).^2,'linewidth',1)
 	else
-		plot(df_dx_(1:nx)/fc,(c(1:nx,3)).^2,'linewidth',1)
+		plot(dF_dx_(1:nx)/fc,(c(1:nx,3)).^2,'linewidth',1)
 	end
-	%plot(df_dx(1:nx/2)/fc,(c(1:nx/2,:)).^2,'linewidth',1)
+	%plot(dF_dx(1:nx/2)/fc,(c(1:nx/2,:)).^2,'linewidth',1)
 	ylabel('Goodness of fit $R^2(a,b)$','interpreter','latex');
 	xlabel('Wavenumber $k_a/k_c$','interpreter','latex');
 	axis tight
 	ylim([0,1])
 	xlim([0,3.5])
 	if (pflag)
-		axis square
+		%axis square
+		pbaspect([3/4,1,1])
 	end
 
 	% plot spectrum	
@@ -182,7 +189,7 @@ function [rk,bb,c] = rk_1d_frequency_response(meta)
 	x = rk.x;
 	dt = [0, 0, 0];
 	for idx=1:length(f0)
-		[mf,mdx] = min(abs(df_dx-f0(idx)*fc));
+		[mf,mdx] = min(abs(dF_dx-f0(idx)*fc));
 		splitfigure([2,3],[1,3+idx],fflag);
 		drawnow
 		%cla
@@ -197,16 +204,18 @@ function [rk,bb,c] = rk_1d_frequency_response(meta)
 		ylim(ax(1),[0,2.3])
 		set(ax(1),'xtick',[-2:2]);
 		set(ax(1),'ytick',[0,1,2]);
-		xlabel(ax(1),'$x/\lambda_c$','interpreter','latex');
+		xlabel(ax(1),'Position $x/\lambda_c$','interpreter','latex');
 		if (idx == 1)
 			ylabel(ax(1),'Biomass $b/\mathrm{rms}(b)$','interpreter','latex')
 		else
 			set(ax(1),'yticklabel',[]);
 		end
-		text(ax(1),-2+dt(idx) + 0.1,2.2 - 0.025,sprintf('$k_a = %g \\cdot k_c$',f0(idx)),'interpreter','latex'); 
+		%text(ax(1),-2+dt(idx) + 0.1,2.2 - 0.025,sprintf('$k_a=%g\\cdot{k_c}, R^2=%0.2f$',f0(idx),r2_f0(idx)),'interpreter','latex'); 
+		text(ax(1),-2+dt(idx) + 0.1,2.2 - 0.025,sprintf('$k_a=%g\\cdot{k_c}$',f0(idx)),'interpreter','latex'); 
 		ax(1).YColor = [0,0,0.7];
 		set(ax(1),'colororder',[0,0,0.7;0.8,0,0]) 
-		axis(ax(1),'square')
+		%axis(ax(1),'square')
+		pbaspect(ax(1),[3/4,1,1])
 		drawnow		
 
 		yyaxis right
@@ -242,7 +251,8 @@ function [rk,bb,c] = rk_1d_frequency_response(meta)
 			ylabel(ax(2),[]);
 			set(ax(2),'yticklabel',[]);
 		end
-		axis(ax(2),'square')
+		%axis(ax(2),'square')
+		pbaspect(ax(2),[3/4,1,1])
 		drawnow
 	end
 	

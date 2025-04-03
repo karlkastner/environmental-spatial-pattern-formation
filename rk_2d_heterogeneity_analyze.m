@@ -27,13 +27,14 @@ function [sp, out] = rk_2d_heterogeneity_analyze(t,z,rk,aniso,p_noise,scalefield
 	if (exist(filename,'file'))
 		load(filename,'sp','out');
 	else
-	 	b = rk.extract2(z(end,:));
+	 	[b,w,h] = rk.extract2(z(end,:));
 	 	b = squeeze(b);
 		b  = single(b);
 		% transposing, to plot bands parallel to the y-axis
 		b = b';
 
 		sp = Spatial_Pattern();
+		sp.source.S = rk.psS.a; 
 		% TODO no magic numbers
 		sp.opt.rmax = 100;
 		sp.opt.scalefield = scalefield;
@@ -56,29 +57,34 @@ function [sp, out] = rk_2d_heterogeneity_analyze(t,z,rk,aniso,p_noise,scalefield
 		a = rk.p.a;
 		% since we transposed the pattern, we have to transpose a as well
 		a = reshape(a,rk.nx)';
-		a = repmat(a,n_oversample,n_oversample);
+		% a = repmat(a,n_oversample,n_oversample);
 		[~,~,f.r] = fourier_axis_2d(n_oversample*rk.L,n_oversample*rk.nx);
+		% TODO deconvolve the noise spectrum and refit
 		par = sp.stat.fit.radial.bandpass.par;
 		Sr_ = bandpass1d_continuous_pdf(f.r,par(1),par(2),true);
 		Sr_ = Sr_.*f.r.^p_noise;
 		Tr_ = sqrt(Sr_);	
 		out.b_bp        = real(ifft2(Tr_.*fft2(a)));
-		q              = quantile(out.b_bp(:),out.p_thresh);
+		q               = quantile(out.b_bp(:),out.p_thresh);
 		out.b_bp_thresh = out.b_bp > q;
 		out.b_overlay   = out.b_thresh + 2*out.b_bp_thresh;
 
 		out.cba(1)   = corr(b(:),out.b_bp(:));
 		out.cba(1,2) = corr(b(:),flat(a));
-		%mean((b>q).*(b_>q_),'all')
-		%mean((b>q).*(~(b_>q_)),'all')
-		%mean((~(b>q)).*(b_>q_),'all')
-		%mean((~(b>q)).*(~(b_>q_)),'all')
 
 		% spectral coherence
 		out.coherence_2d = coherence_2d(a-mean(a,'all'),b-mean(b,'all'),nf);
 		out.coherence_r  = coherence_radial(a-mean(a,'all'),b-mean(b,'all'),nf_);
-		%fc = sp.stat.fc.radial.hp;
+
+		%$[b,w,h] = rk.extract2(y(end,:));
+		%if (length(rk.p.a) ==1)
+		infiltration = flat(a.*rk.infiltration_enhancement(b));
+		infiltration = infiltration.*flat(h);
+		cva_ = std(rk.p.a,[],'all')./mean(rk.p.a,'all');
+		cvi  = std(infiltration,[],'all')./mean(infiltration,'all');
+		out.relstd = cva_./cvi;
 	else
+		out.relstd = NaN; 
 		out.b_bp = [];
 		out.b_bp_thresh = [];
 		out.b_overlay = [];
@@ -152,7 +158,7 @@ if (0)
 
 end % if 0
  
-		save(filename,'sp','out');
+		save(filename,'-v7.3','sp','out');
 	end % if ~exist filename
 end % analyze
 

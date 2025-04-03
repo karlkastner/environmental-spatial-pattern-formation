@@ -40,43 +40,52 @@ function [x,bb,w,tp,rk] = rk_1d_phase_shift_experiment_single_bump(meta)
 	da = [0.2] %0.199 0.2 0.201];
 	ap = 1-da;
 	sig = -1;
-	vh   = sig*meta.example.vh;
-	eh   = meta.mopt.eh;
+	ex = [0.1,0.1,meta.mopt.eh];
+	vx   = [0,0,sig*meta.example.vh];
+%	eh   = meta.mopt.eh;
+
 	lambda0 = 250;
 	db = 0;
 	fc0 = 1./lambda0;
 	fc0 = [];
 	% initialize random number generator
 
-	rkmap = Rietkerk_Map('path_str','mat/');
-	rkmap.init();
-	rkmap.opt.hashvectors = true;
+	%rkmap = Rietkerk('path_str','mat/');
+	%rkmap.init();
+	%rkmap.opt.hashvectors = true;
 
 	for ldx = 1:length(L0)
 	for adx = 1:length(da)
 
 	param = struct();
 	param.L = L;
-	param.n = round(L/dx);
+	param.nx = round(L/dx);
 	param.T = meta.mopt.To;
-	param.dt = meta.mopt.dt;
-	param.dto = meta.mopt.dto;
+	param.opt.dt = meta.mopt.dt;
+	param.opt.dto = meta.mopt.dto;
 	param.pss.a  = sd_a;
-	param.pmu.eh = eh;
-	param.pmu.vh = vh;
-	param.pst.db = db;
-	param.initial_condition = 'random';
+	param.pmu.ex = ex;
+	param.pmu.vx = vx;
+%	param.pst.db = db;
+	param.initial_condition = 'obj.random_state()'; %random';
+	param.opt.path_str = 'mat/';
+	param.opt.solver  = 'solve_split';
+	param.opt.inner_solver = 'step_advect_diffuse_spectral';
+
+	rk = Rietkerk(param);
 	if (isempty(fc0))
-		[t,y,rk]   = rkmap.run(param);
+		[t,y]   = rk.run(); %param);
 		y0 = rk.initial_condition_from_central_frequency(y(end,:));
 	else
-		rk = Rietkerk(param); 
+		%rk = Rietkerk(param); 
 		y0 = rk.initial_condition_periodic(fc);
 	end
 
 	param.initial_condition = y0;
+	rk = Rietkerk(param);
 	% run model
-	[t,y,rk] = rkmap.run(param);
+	[t,y] = rk.run(); %param);
+	%[t,y,rk] = rkmap.run(param);
 	y = double(y);
 	
 	[bb,ww,hh] = rk.extract2(y);
@@ -101,9 +110,11 @@ function [x,bb,w,tp,rk] = rk_1d_phase_shift_experiment_single_bump(meta)
 	    )); 
 	param.pss.a = 0;
 	param.T =  T;
-	param.dt = dt;
+	param.opt.dt = dt;
 	param.initial_condition = y0;
-	[t,y,rk]   = rkmap.run(param);
+	rk = Rietkerk(param);
+	%[t,y,rk]   = rkmap.run(param);
+	[t,y]   = rk.run();
 	[b,w,h] = rk.extract1(y(end,:)');
 	[bb,ww,hh] = rk.extract1(y);
 

@@ -1,4 +1,6 @@
 % Karl Kästner, Berlin
+% Tue 31 May 19:23:38 CEST 2022
+% 2023-01-21 22:10
 %
 % This program is free software: you can redistribute it and/or modify
 % it under the terms of the GNU General Public License as published by
@@ -19,7 +21,9 @@
 %% generate series of patterns with the Riektkerk model for vaying
 %% degrees of spatial heterogeneity
 %
-function tab = rk_2d_heterogeneity_experiment(meta,aniso)
+function [tab,r2] = rk_2d_heterogeneity_experiment(meta,aniso)
+	maxNumCompThreads(1)
+
 	if (nargin()<1||isempty(meta))
 		meta = pattern_formation_metadata();
 	end
@@ -28,17 +32,16 @@ function tab = rk_2d_heterogeneity_experiment(meta,aniso)
 		aniso = 0; 
 	end
 	fflag = meta.pflag;
+	fflag = 1;
 	ps    = 3.5;
 
 	visible = meta.visible;
 	scalefield = 'hat';
-	%qthresh = {0.75,[]};
 
-	[param, vp, p_noise, sap,nkc] = rk_2d_heterogeneity_setup1(aniso);
-	s_a = vp.sa_times_a / param.pmu.a;
-	%sap = [];
+	%[param, vp, p_noise, sap,nkc] = rk_2d_heterogeneity_setup_intermediate(aniso);
+	[param, vp, p_noise, sap,nkc] = rk_2d_heterogeneity_setup_complete(aniso);
+	cva = vp.sa_times_a / param.pmu.a;
 
-		%nx = round(L./dx);
 		sp_a = Spatial_Pattern(); 
 
 		relstd = [];		
@@ -51,19 +54,23 @@ function tab = rk_2d_heterogeneity_experiment(meta,aniso)
 		Si = [];
 		xi = [];
 		Ri = [];
-		%cS  = [];
-		%clear r2
-		%eg = [];
-		%regularity_q = [];
-		%regularity_p = [];
-		%RR = [];
-		%end
+		celerity = [];
 
 		% variable parameters	
-		% TODO make dynamic
 		name_C = {};
 		val_C  = {};
-		name_C{end+1} = 'opt.rng'; 
+		f_C = fieldnames(vp);
+if (0)
+		for idx=1:length(f_C)
+			name_C{end+1} = f_C{idx};
+			if (isnumeric(vp.(f_C{idx})))
+				val_C{end+1} = num2cell(vp.(f_C{idx}));
+			else
+				val_C{end+1} = vp.(f_C{idx});
+			end
+		end
+else
+		name_C{end+1}  = 'opt.rng'; 
                 val_C{end+1}   = num2cell(vp.seed);
 		name_C{end+1}  = 'pss.a';
 		val_C{end+1}   = num2cell(vp.sa_times_a);
@@ -71,19 +78,39 @@ function tab = rk_2d_heterogeneity_experiment(meta,aniso)
 		val_C{end+1}   = num2cell(vp.pmu.R);
 		name_C{end+1}  = 'pmu.ey';
 		val_C{end+1}   = vp.pmu.ey;
+		name_C{end+1}  = 'psl.a';
+		val_C{end+1}   = num2cell(vp.psl.a); 
+end
+
+		% initial condition (uniform / random)
+		% heterogeneity spectrum (near white / near pink)
+		% R = 
+		% T/4
+		% L/4
+		 
+
 
 		k  = 0;
 		nn = prod(cellfun(@length,val_C));
 		function run_(param)
 			k = k+1;
-                        param.opt.path_str = sprintf('mat/server/vxh-%g-eyh-%g-R-%g-L-%g-%g-T-%g-seed-%g/',param.pmu.vx(3),param.pmu.ey(3),param.pmu.R,param.L,param.T,param.opt.rng);
+                        param.opt.path_str = sprintf( ...
+				'mat/server/vxh-%g-eyh-%g-R-%g-psl-%g-L-%g-%g-T-%g-seed-%g/' ...
+				 , param.pmu.vx(3) ...
+				 , param.pmu.ey(3) ...
+				 , param.pmu.R ...	
+				 , param.psl.a ...
+				 , param.L...
+				 , param.T ...
+				 , param.opt.rng ...
+				 );
 			disp(param.opt.path_str)
 			mkdir(param.opt.path_str);
 
 			% run time estimate
-			printf('Iteration k %d/%d s_a = %f\n',k,nn,param.pss.a./param.pmu.a);
+			printf('Iteration k %d/%d CV(a) = %f\n',k,nn,param.pss.a./param.pmu.a);
 			rk = Rietkerk(param);
-		        [t,y,out] = rk.run();
+		        [t, y, out] = rk.run();
 			% continue model run
 			if (length(param.T)>1)
 				rk.T  = T(2);
@@ -104,6 +131,11 @@ function tab = rk_2d_heterogeneity_experiment(meta,aniso)
 					rk.save(t,y,out);
 				end
 			end
+			% write data as struct to be readable without class code
+			filename = rk.filename;
+			srad = struct(rk);
+			%save(filename,'-append','srad');
+
 			y = single(y);
 
 			if (meta.analyze || meta.dflag)
@@ -112,31 +144,59 @@ function tab = rk_2d_heterogeneity_experiment(meta,aniso)
 				lc(k,1)    = sp.lambda_c;
 				cba(k,:) = out.cba;
 
-				[b,w,h] = rk.extract2(y(end,:));
-				if (length(rk.p.a) ==1)
-				relstd(k,1) = 0;
-				else
-				infiltration = flat(reshape(rk.p.a,rk.nx).*rk.infiltration_enhancement(b));
-				infiltration(:,2) = infiltration(:,1).*flat(h);
-				relstd(k,1:2) = 1./(std(infiltration)./mean(infiltration)*mean(rk.p.a)/std(rk.p.a)); 
-				end
 
-				p_periodic(k,1)  = sp.stat.p_periodic;
+				p_periodic(k,1) = sp.stat.p_periodic;
+				relstd(k,1) = out.relstd;
+				if (0)
 				if (aniso)
-					fi        = out.fi.x;
-					xi        = out.xi;
+					fi      = out.fi.x;
+					xi      = out.xi;
 					Si(:,k) = out.Si.x.pdf.(scalefield);
 					Ri(:,k) = out.Ri.x.(scalefield);
 					r2(k,1) = sp.stat.fit.x.phase_drift.stat.goodness.r2;
 				else
-					fi        = out.fi.radial;
-					xi        = out.xi;
+					fi      = out.fi.radial;
+					xi      = out.xi;
 					Si(:,k) = out.Si.radial.pdf.(scalefield);
 					Ri(:,k) = out.Ri.radial.(scalefield);
 					r2(k,1) = sp.stat.fit.x.bandpass.stat.goodness.r2;
+				end
 				end				
 			end
-			if (meta.dflag || ismember(round(100*param.pss.a./param.pmu.a),round(100*sap)))
+			if (aniso)
+if (0)
+				rk.pmu.vy = rk.pmu.vx;
+				rk.pmu.vx(:) = 0;
+				rk.opt.dto = 1;
+				rk.T   = 10;
+				rk.opt.output_class = @single;
+				rk.opt.solver = 'solve_split';
+				rk.opt.inner_solver = 'step_advect_diffuse_spectral';
+
+					rk.initial_condition = y(end,:);
+				
+				[t,y_] = rk.run();
+end
+				y_ = y;
+				celerity(k,1:2,:) = rk.celerity(y_(end,:),true);
+			end
+			if (0)
+			squeeze(celerity(:,1,:))
+			squeeze(celerity(:,2,:))
+			clf
+			b1 = rk.extract2(y_(1,:));
+			b2 = rk.extract2(y_(end,:));
+			subplot(2,2,1)
+			imagesc(b1);
+			subplot(2,2,2)
+			imagesc(b2);
+			subplot(2,2,3)
+			%plot([b1(1,:)',b2(1,:)']);
+			plot([b1(:,1),b2(:,1)]);
+			end
+		%y_(1,:)',y_(end,:)']);
+%			pause
+			if (0) % meta.dflag || ismember(round(100*param.pss.a./param.pmu.a),round(100*sap)))
 				rk_2d_heterogeneity_plot(rk,sp,out,k,aniso,nkc,meta,visible);
 			%[Sc_,lc(k),cf,cS(:,k),cfi,cSi(:,k), ...
 			%	pt(k),pt_,cba(k,:),r2(k),sp_a(k),RR(:,k)] = ...
@@ -181,16 +241,16 @@ end % if length
 	load(meta.filename.observed_patterns,'sp');
 
 	% plot regularity vs heterogeneity
-	splitfigure([2,2],[1,1],fflag,[],[],[],[],'Visible',visible);
+	splitfigure([2,2],[1e3,1],fflag,[],[],[],[],'Visible',visible);
 	yyaxis left
 	cla();
 	if (length(vp.seed)>1)
-		errorbar(s_a,regularity_q(:,2),regularity_q(:,2)-regularity_q(:,1),regularity_q(:,3)-regularity_q(:,2),'o','markerfacecolor','k','linewidth',1,'markersize',3)
+		errorbar(cva,regularity_q(:,2),regularity_q(:,2)-regularity_q(:,1),regularity_q(:,3)-regularity_q(:,2),'o','markerfacecolor','k','linewidth',1,'markersize',3)
 	else
-		plot(s_a,regularity,'ko','markerfacecolor','k','markersize',3);
+		plot(cva,regularity,'ko','markerfacecolor','k','markersize',3);
 	end
 	hold on
-	sa_ = mid(s_a);
+	sa_ = mid(cva);
 	p_periodic_ = median(p_periodic,2);
 	%p_periodic_ = medfilt1([p_periodic_(1);p_periodic;p_periodic_(end)],3);
 	%p_periodic_ = medfilt1([p_periodic_(1);p_periodic_(1);p_periodic_;p_periodic_(end);p_periodic_(end)],5);
@@ -198,10 +258,10 @@ end % if length
 	p_periodic_ = p_periodic;
 	fdx = find(diff(p_periodic_>0.05)>0,1,'first');
 %	set(gca,'xtick',0:dsap:1);
-	xlim([0,max(s_a)+sqrt(eps)]);
+	xlim([0,max(cva)+sqrt(eps)]);
 	ylim([0, 1.05*max(req_q(:))]);
 	set(gca,'xtick',0:0.1:1);
-	xlabel('Exogenous heterogeneity $s_a$','interpreter','latex');
+	xlabel('Exogenous heterogeneity $CV(a)$','interpreter','latex');
 	axis square;
 	if (~isempty(fdx))
 		vline(sa_(fdx),'linestyle','-','color','red','linewidth',1);
@@ -213,56 +273,56 @@ end % if length
 	end
 	yyaxis right
 	cla
-	plot(s_a,relstd(:,1),'linewidth',1,'color',[0,0,0.7]);
+	plot(cva,relstd(:,1),'linewidth',1,'color',[0,0,0.7]);
 	set(gca,'ycolor',[0,0,0.7])
 	ylabel('Fraction of exogenous heterogeneity      ');
 %Heterogeneity ratio $\displaystyle \frac{\mathrm{std}(a) \bar a_v}{\mathrm{std}(a_v) \bar a}$','interpreter','latex');
 	drawnow();
 
 	% plot max of density Sc vs heterogeneity
-	splitfigure([2,2],[1,2],fflag,[],[],[],[],'Visible',visible);
+	splitfigure([2,2],[1e3,2],fflag,[],[],[],[],'Visible',visible);
 	cla();
 	if (length(vp.seed)>1)
-		errorbar(s_a,Sc_q(:,2),Sc_q(:,2)-Sc_q(:,1),Sc_q(:,3)-Sc_q(:,2),'o','markerfacecolor','k','linewidth',1,'markersize',3)
+		errorbar(cva,Sc_q(:,2),Sc_q(:,2)-Sc_q(:,1),Sc_q(:,3)-Sc_q(:,2),'o','markerfacecolor','k','linewidth',1,'markersize',3)
 	else
-		plot(s_a,Sc,'ko','markerfacecolor','k','markersize',3);
+		plot(cva,Sc,'ko','markerfacecolor','k','markersize',3);
 	end
 %	set(gca,'xtick',0:dsap:1);
-	xlabel('Exogenous heterogeneity $s_a$','interpreter','latex');
+	xlabel('Exogenous heterogeneity $CV(a)$','interpreter','latex');
 	ylabel('Density maximum $S_c$','interpreter','latex');	
 	%ylim([0,625]);
-	xlim([0,max(s_a)+sqrt(eps)]);
+	xlim([0,max(cva)+sqrt(eps)]);
 	drawnow();
 	axis square
 	drawnow();
 
 	% plot characteristic wavelength lambda_c
-	splitfigure([2,2],[1,3],fflag,[],[],[],[],'Visible',visible);
+	splitfigure([2,2],[1e3,3],fflag,[],[],[],[],'Visible',visible);
 	cla();
 	if (length(vp.seed)>1)
-		errorbar(s_a,lc_q(:,2),lc_q(:,2)-lc_q(:,1),lc_q(:,3)-lc_q(:,2),'o','markerfacecolor','k','linewidth',1,'markersize',3)
+		errorbar(cva,lc_q(:,2),lc_q(:,2)-lc_q(:,1),lc_q(:,3)-lc_q(:,2),'o','markerfacecolor','k','linewidth',1,'markersize',3)
 		ylim([0,1.05*max(lc_q,[],'all')]);
 	else
-		plot(s_a,lc,'ko','markerfacecolor','k','markersize',3);
+		plot(cva,lc,'ko','markerfacecolor','k','markersize',3);
 		ylim([0,1.05*max(lc,[],'all')]);
 	end
 %	set(gca,'xtick',0:dsap:1);
-	xlabel('Exogenous heterogeneity $s_a$','interpreter','latex');
+	xlabel('Exogenous heterogeneity $CV(a)$','interpreter','latex');
 	ylabel('Wavelength $\lambda_c$ / m','interpreter','latex')
 	axis square
-	xlim([0,max(s_a)+sqrt(eps)]);
+	xlim([0,max(cva)+sqrt(eps)]);
 	drawnow();
 
 if (aniso)
 	r2_ = r2; %arrayfun(@(x) x.phase_drift(end),r2);
-	%plot(s_a,r2.stoch(:,1),'-','linewidth',1);
+	%plot(cva,r2.stoch(:,1),'-','linewidth',1);
 else
 	r2_ = r2; %arrayfun(@(x) x.bandpass(end),r2);
 end
 	% plot correlation between rad-pattern and bandpass pattern
-	splitfigure([2,2],[1,4],fflag,[],[],[],[],'Visible',visible);
+	splitfigure([2,2],[1e3,4],fflag,[],[],[],[],'Visible',visible);
 	cla();
-	sai = linspace(s_a(1),s_a(end))';
+	sai = linspace(cva(1),cva(end))';
 	if (~aniso)
 	plot(NaN,NaN,'k.-','linewidth',1);
 	hold on
@@ -274,19 +334,21 @@ end
 	end
 if (length(vp.seed)>1)
 	cba_ = mean(cba,3); 
-	cbai = interp1(cvec(s_a),cba_,sai,'pchip');
+	cbai = interp1(cvec(cva),cba_,sai,'pchip');
 	plot(sai,cbai(:,1),'k-','linewidth',1);
 	plot(sai,cbai(:,2),'k--','linewidth',1);
-	errorbar(s_a,regularity_q_cba1(:,2),regularity_q_cba1(:,2)-regularity_q_cba1(:,1),regularity_q_cba1(:,3)-regularity_q_cba1(:,2),'ko','markerfacecolor','k','linewidth',1,'markersize',3)
-	errorbar(s_a,regularity_q_cba2(:,2),regularity_q_cba2(:,2)-regularity_q_cba2(:,1),regularity_q_cba2(:,3)-regularity_q_cba2(:,2),'ko','markerfacecolor','k','linewidth',1,'markersize',3)
+	errorbar(cva,regularity_q_cba1(:,2),regularity_q_cba1(:,2)-regularity_q_cba1(:,1),regularity_q_cba1(:,3)-regularity_q_cba1(:,2),'ko','markerfacecolor','k','linewidth',1,'markersize',3)
+	errorbar(cva,regularity_q_cba2(:,2),regularity_q_cba2(:,2)-regularity_q_cba2(:,1),regularity_q_cba2(:,3)-regularity_q_cba2(:,2),'ko','markerfacecolor','k','linewidth',1,'markersize',3)
 else
 	if (~aniso)
-		plot(s_a,cba(:,1).^2,'k-','linewidth',1);
-		plot(s_a,cba(:,2).^2,'k--','linewidth',1);
+		plot(cva,cba(:,1).^2,'k-','linewidth',1);
+		plot(cva,cba(:,2).^2,'k--','linewidth',1);
+		plot(cva,r2_,'r-','linewidth',1);
+	else
+		plot(cva,r2_,'r-','linewidth',1);
 	end
-	plot(s_a,r2_,'r-','linewidth',1);
 end
-	xlabel('Exogenous heterogeneity $s_a$','interpreter','latex');
+	xlabel('Exogenous heterogeneity $CV(a)$','interpreter','latex');
 	ylabel('Goodness of fit','interpreter','latex');
 	if (aniso)
 		legend('$R^2(S_b,S_{PNI})$', ... %'$R^2(b,a)$','$R^2(S_b,S_{PNI})$', ...
@@ -298,7 +360,8 @@ end
 				'location','southeast','interpreter','latex');
 
 	end
-	xlim([0,max(s_a)+sqrt(eps)]);
+	xlim([0,max(cva)+sqrt(eps)]);
+	ylim([0,1]);
 	set(gca,'xtick',0:0.1:1);
 %	set(gca,'xtick',0:dsap:1);
 	ylim([min(0,min(cba(:))),1]);
@@ -306,29 +369,29 @@ end
 	set(gca,'ytick',0:0.2:1);
 if (0)
 	yyaxis right
-	plot(s_a,r2_,'-','linewidth',1);
+	plot(cva,r2_,'-','linewidth',1);
 	ylim([0,1]);
 	ylabel('R$^2$ of density fit');
 end
 	drawnow()
 
 	% p-value of periodicity test
-	splitfigure([2,2],[2,1],fflag,[],[],[],[],'Visible',visible);
+	splitfigure([2,2],[2e3,1],fflag,[],[],[],[],'Visible',visible);
 	cla
-	plot(s_a,p_periodic);
+	plot(cva,p_periodic);
 	hold on
-	plot(s_a,p_periodic_);
-	xlim([0,max(s_a)+sqrt(eps)]);
+	plot(cva,p_periodic_);
+	xlim([0,max(cva)+sqrt(eps)]);
 	ylabel('P-test');
-	xlabel('Exogenous heterogeneity $s_a$','interpreter','latex');
+	xlabel('Exogenous heterogeneity $CV(a)$','interpreter','latex');
 	axis square
 	drawnow()
 
 	% plot spectral density
 	if (~isempty(sap))
-	splitfigure([2,2],[2,2],fflag,[],[],[],[],'Visible',visible);
+	splitfigure([2,2],[2e3,2],fflag,[],[],[],[],'Visible',visible);
 	cla();
-	fdx = ismember(round(100*s_a),round(100*sap));
+	fdx = ismember(round(100*cva),round(100*sap));
 	plot(fi,mean(Si(:,fdx,:),3),'-','linewidth',1);
 	xlabel('Wave number $k_x/k_c$','interpreter','latex');
 	if (aniso)
@@ -356,7 +419,7 @@ end
 	xlim([0,2.5])
 	ylim([0,7]);
 	axis square
-	leg = arrayfun(@(x) num2str(x,'RK s_a = %0.2f'),s_a(fdx),'uniformoutput',false);
+	leg = arrayfun(@(x) num2str(x,'RK CV(a) = %0.2f'),cva(fdx),'uniformoutput',false);
 	leg{end+1} = 'natural';
 	lh = legend(leg{:});
 	drawnow()
@@ -367,9 +430,9 @@ if (0)
 end
 
 	% plot autocorrelation
-	splitfigure([2,2],[2,3],fflag,[],[],[],[],'Visible',visible);
+	splitfigure([2,2],[2e3,3],fflag,[],[],[],[],'Visible',visible);
 	cla()
-	fdx = find(ismember(round(100*s_a),round(100*sap)));
+	fdx = find(ismember(round(100*cva),round(100*sap)));
 	fdx
 	for idx=rvec(fdx)
 		%if (0 == aniso)
@@ -411,7 +474,7 @@ end
 		ylabel('Autocorrelation $\pi \sqrt{r/\lambda_c} R_r$','interpreter','latex');
 	end
 	%lh=legend(num2str(cvec(sap)));
-	%title(lh,'Heterogeneity $s_a$','interpreter','latex');
+	%title(lh,'Heterogeneity $cva$','interpreter','latex');
 	set(gca,'colororder',meta.colormap);
 	drawnow()
 %catch e
@@ -419,7 +482,7 @@ end
 %end
 end % if sap
 
-	splitfigure([2,2],[2,4],fflag,[],[],[],[],'Visible',visible); 
+	splitfigure([2,2],[1e3,4],fflag,[],[],[],[],'Visible',visible); 
 	cla();
 if (0)
 	r2.stoch = median(r2.stoch,2);
@@ -431,27 +494,35 @@ if (0)
 	printf('median(r2_logn): %f\n',median(r2.logn));
 	printf('median(r2_gamma): %f\n',median(r2.gamma));
 end
-	%plot(s_a,[r2.stoch,r2.logn,r2.gamma,r2.white,r2.periodic],'.-','linewidth',1);
+	%plot(cva,[r2.stoch,r2.logn,r2.gamma,r2.white,r2.periodic],'.-','linewidth',1);
 %	r2_ = [arrayfun(@(x) x.bandpass(2),r2), arrayfun(@(x) x.phase_drift(2),r2), arrayfun(@(x) x.logn(2),r2),arrayfun(@(x) x.gamma(2),r2),arrayfun(@(x) x.white(2),r2),arrayfun(@(x) x.periodic(2),r2)];
 %	median(r2_)
 if (0)
-%	plot(s_a,r2_,'linewidth',1);
+%	plot(cva,r2_,'linewidth',1);
 end
 %	ylim([0,1]);
-	xlabel('Exogenous heterogeneity $s_a$','interpreter','latex');
+	xlabel('Exogenous heterogeneity $CV(a)$','interpreter','latex');
 	if (aniso)
-		ylabel('R$^2$ of $S_x$ density fit','interpreter','latex');
-		legend({'PNI','Log-normal','Gamma'},'location','southeast');
+		plot(cva,r2,'.','color',[0,0,0.6]);
+		ylabel('Goodness of density fit $R^2_{S_x+}$','interpreter','latex');
+		%ylabel('R$^2$ of $S_x$ density fit','interpreter','latex');
+		%legend({'PNI','Log-normal','Gamma'},'location','southeast');
+		tab.r2  = r2;
 	else
 		ylabel('R$^2$ of $S_r$ density fit','interpreter','latex');
 		legend({'BP','Log-normal','Gamma'},'location','southeast');
 	end
+	ylim([0,1]);
 	set(gca,'colororder',meta.colormap);
 	axis square
 	drawnow()
+	str = sprintf('img/rk-2d-sl-%g-vxh-%g-eyh-%g-R-%g-L-%d-T-%1.0e',param.psl.a,param.pmu.vx(3),vp.pmu.ey{1}(3),vp.pmu.R(1),param.L(1),param.T(end));
+        xlabel('Exogenous Heterogeneity $CV(a)$','interpreter','latex');          
+	ps = 4;
+%	pdfprint(1e4+4,[str,'-r2-density-fit'],ps);
 
 	tab = table();
-	tab.s_a = cvec(s_a);	
+	tab.cva = cvec(cva);	
 	tab.Sc = cvec(Sc);
 	tab.wavelength_c = cvec(lc);
 	tab.regularity = cvec(regularity);
@@ -459,9 +530,22 @@ end
 	tab.correlation_ba = cba;
 %	tab.r2  = r2;
 
-	if (meta.pflag)
+	fflag = true();
+
+	splitfigure([2,2],[3e3,1],fflag);
+	%celerity
+	celerity = squeeze(celerity(:,2,1));
+	celerity = celerity*sign(celerity(1));
+	plot(cva,celerity,'.','color',[0,0,0.6]);
+	xlabel('Exogenous Heterogeneity $CV(a)$','interpreter','latex');
+	ylabel('Migration celerity $c$ / (m/d)','interpreter','latex');
+	xlim([0,cva(end)]);
+	ylim([-sqrt(eps),1.05*max(celerity)]);
+	axis square
+%	pdfprint(3e3*10+1,[str,'-migration-celerity.pdf'],ps);
+
+	if (0) %meta.pflag)
 		aspect = [];
-		str = sprintf('img/rk-2d-sl-%g-vxh-%g-eyh-%g-R-%g-L-%d-T-%1.0e',param.psl.a,param.pmu.vx(3),vp.pmu.ey{1}(3),vp.pmu.R(1),param.L(1),param.T(end));
 	
 		pdfprint(11,[str,'-regularity-vs-sa.pdf'],ps,aspect);
 		pdfprint(12,[str,'-Sc-vs-sa.pdf'],ps,aspect);
@@ -477,7 +561,7 @@ end
 		%pdfprint(23,[str,'-acf-Rr.pdf'],ps);
 		end
 	%	pdfprint(2e5+3,[str,'-autocorrelation.pdf'],ps);
-	%	pdfprint(2e5+4,[str,'-r2-density-fit'],ps);
+		pdfprint(2e5+4,[str,'-r2-density-fit'],ps);
 		%pdfprint(100001,sprintf('img/rietkerk-2d-regularity-vs-sa-vh-%g-R-%g-L-%d-T-%1.0e.pdf',rk.pmu.vh(2),rk.pmu.R,L(1),T),ps,aspect);
 		%pdfprint(100002,sprintf('img/rietkerk-2d-Sc-vs-sa-vh-%g-R-%g-L-%d-T-%1.0e.pdf',rk.pmu.vh(2),rk.pmu.R,L(1),T),ps,aspect);
 		%pdfprint(100003,sprintf('img/rietkerk-2d-wavelength-vs-sa-vh-%g-R-%g-L-%d-T-%1.0e.pdf',rk.pmu.vh(2),rk.pmu.R,L(1),T),ps,aspect);

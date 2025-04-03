@@ -21,6 +21,7 @@
 %%       the run time can be cut by reducing the number of cases and resolution
 %%	 in rk_2d_heterogeneity_experiments
 %%
+%%	dependencies_determine('dependencies.csv','mat/profile-3.mat',{'mimimum_working_example'})
 
 	% set to true to save fitures to files 
 	pflag = false;
@@ -54,6 +55,9 @@
 	% dependencies_determine(meta.filename.dependencies,meta.filename.profile,{'pattern_analysis_batch','pdfprint'});
 	dependencies_fetch(meta.url,meta.filename.dependencies);
 
+	addpath_recursive('lib/');
+
+	minimum_working_example();
 
 	% Figure 01 : natural regular patterns from aerial images
 	close all;
@@ -66,13 +70,27 @@
 	% Figure 02
 	close all;
 	plot_filter_schematic_2d(pflag);
+
+	% Figure
+	close all;
+	plot_exogenous_heterogeneity();
+
+	% Figure 03 (thresholding)
+	experiment_rk_aridity_transition();
 	
 	% Figure 03
 	grazing_model_experiment();
 
 	% Figure 04, 07 : computer generated patterns, regularity, corr(a,b)
 	close all;
+	% TODO rename exp in series simulate 
 	rk_2d_heterogeneity_experiment(meta);
+	close all;
+	rk_2d_series_postprocess_aniso();
+	close all;
+	rk_2d_heterogeneity_postprocess_iso();
+	close all;
+	rk_2d_hetero_series_plot_isotropic_spectral_coherence();
 
 	% figure 05: bandpass-like frequency response of the isotropci RK-model
 	close all;
@@ -87,21 +105,37 @@
 	rk_1d_phase_shift_experiment_single_bump(meta);
 
 	% Figure 08
+	close all
 	rk_1d_experiment_phase_noise_integration(meta);
 
 	% Figure 09
 	close all
-	phase_noise_illustration;
+	%phase_noise_illustration();
+	example_phase_noise();
 
 	% Figure 10 : phase-noise-integration patterns and density
 	close all;
-	plot_phase_noise_integration_2d(meta);
+	plot_noisy_oscillator_2d(meta);
 
 	% Figure 11
 	close all
 	plot_pattern_formation_schematic(meta);
 
-	% Figure 12
+	% supplement
 	close all
-	entropy_vs_regularity;	
+	experiment_ou_correlation_length()
+
+	% supplement
+	close all
+	experiment_heterogeneity_variance_vs_spatial_resolution()
+	example_exogenous_heterogeneity_artefacts();
+	plot_heterogeneity_distribution();
+
+	% supplement
+	close all
+	experiment_heterogeneity_artefacts()
+
+	% supplement
+	close all
+	example_phase_noise_meander_tiles();
 

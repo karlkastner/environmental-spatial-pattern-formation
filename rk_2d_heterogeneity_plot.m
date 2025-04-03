@@ -1,5 +1,6 @@
-% Tue 31 May 19:23:38 CEST 2022
 % Karl Kästner, Berlin
+% Tue 31 May 19:23:38 CEST 2022
+% 2023-01-21 22:05
 %
 % This program is free software: you can redistribute it and/or modify
 % it under the terms of the GNU General Public License as published by
@@ -15,6 +16,8 @@
 % along with this program.  If not, see <http://www.gnu.org/licenses/>.
 %
 %% plot patterns generated with the rietkerk model
+%
+% TODO plot Sxp not Sx
 function rk_2d_heterogeneity_plot(rk,sp,out,figid,aniso,nkc,meta,visible)
 	ps      = meta.plotscale;
 	fflag   = meta.pflag;
@@ -34,11 +37,12 @@ function rk_2d_heterogeneity_plot(rk,sp,out,figid,aniso,nkc,meta,visible)
 	% plot 2D
 		% biomass 2d
 		 splitfigure([3,3],[figid+0,1],fflag,num2str(rk.pss.a),[],[],[],'Visible',visible);
+		pause(0.3)
 		 cla();
 		 sp.plot('b');
-		 	%imagesc((x{2}-x{2}(1))/lc,(x{1}-x{1}(1))/lc,(b>p)');
-		 	%xlabel('$x/\lambda_c$','interpreter','latex');
-		 	%ylabel('$y/\lambda_c$','interpreter','latex');
+	 	 %imagesc((x{2}-x{2}(1))/lc,(x{1}-x{1}(1))/lc,(b>p)');
+	 	 %xlabel('$x/\lambda_c$','interpreter','latex');
+	 	 %ylabel('$y/\lambda_c$','interpreter','latex');
 		 colormap(fcmap(256)); %meta.colormap_b);
 		 axis equal
 		 axis tight
@@ -49,6 +53,7 @@ function rk_2d_heterogeneity_plot(rk,sp,out,figid,aniso,nkc,meta,visible)
 
 		 % correlogram 2d
 		 splitfigure([3,3],[figid+0,4],fflag,[],[],[],[],'Visible',visible);
+		pause(0.3)
 		 cla();
 		 sp.plot('R.hat'); 
 		 axis(nkc*[-1,1,-1,1]);
@@ -69,7 +74,9 @@ function rk_2d_heterogeneity_plot(rk,sp,out,figid,aniso,nkc,meta,visible)
 			title('Correlogram 2D');
 		 end % ~meta.pflag
 
+		% periodogram
 		 splitfigure([3,3],[figid+0,7],fflag,[],[],[],[],'Visible',visible);
+		pause(0.3)
 		 cla();
 		 sp.plot('S.hat'); 
 		 axis(nkc*[-1,1,-1,1]);
@@ -89,6 +96,7 @@ function rk_2d_heterogeneity_plot(rk,sp,out,figid,aniso,nkc,meta,visible)
 
 		%if (0)
 		% splitfigure([2,4],[figid+0,4],fflag,[],[],[],[],'Visible',visible);
+		%pause(0.3)
 		% cla();
 		% imagesc(fftshift(f.x{1})*l1c,fftshift(f.x{2})*l1c,fftshift(S2(:,:,idx))/l1c);
 		% axis(nkc*[-1,1,-1,1]);
@@ -102,6 +110,7 @@ function rk_2d_heterogeneity_plot(rk,sp,out,figid,aniso,nkc,meta,visible)
 
 		% biomass 1d
 		 splitfigure([3,3],[figid+0,1+jdx],fflag,[],[],[],[],'Visible',visible);
+		pause(0.3)
 		 cla();	
 		 if (jdx == 1)
 		 plot(x{jdx}/lc,sp.b(round(end/2),:));
@@ -116,6 +125,7 @@ function rk_2d_heterogeneity_plot(rk,sp,out,figid,aniso,nkc,meta,visible)
 
 		% 1d density
 		 splitfigure([3,3],[figid+0,4+jdx],fflag,[],[],[],[],'Visible',visible);
+		pause(0.3)
 		 cla();
 		if (aniso)
 		 if (1==jdx)
@@ -162,6 +172,7 @@ function rk_2d_heterogeneity_plot(rk,sp,out,figid,aniso,nkc,meta,visible)
 	
 		% 1D autocorrelation
 		splitfigure([3,3],[figid+0,7+jdx],fflag,[],[],[],[],'Visible',visible);
+		pause(0.3)
 		cla();
 		if (aniso)
 			if (1 == jdx)
@@ -184,18 +195,23 @@ function rk_2d_heterogeneity_plot(rk,sp,out,figid,aniso,nkc,meta,visible)
 	
 	% plot overlay of rad and bandpass generated pattern
 	splitfigure([3,3],[figid+1,1],fflag,[],[],[],[],'Visible',visible);
+		pause(0.3)
 	imagesc(out.b_thresh);
 	axis equal
 	title('RK');
-	drawnow
+	%drawnow();
 
+	%figid+1
 	splitfigure([3,3],[figid+1,2],fflag,[],[],[],[],'Visible',visible);
+		pause(0.3)
+	%drawnow();
 	imagesc(out.b_bp_thresh);
 	axis equal
 	title('BP');	
-	drawnow
+	%drawnow();
 
 	splitfigure([3,3],[figid+1,3],fflag,[],[],[],[],'Visible',visible);
+		pause(0.3)
 	cla();
 	for pdx=1:4
 		plot(NaN(1),NaN(1),'ko','markerfacecolor',col_overlay(pdx,:));
@@ -213,22 +229,25 @@ function rk_2d_heterogeneity_plot(rk,sp,out,figid,aniso,nkc,meta,visible)
 	ylim([0,lx_overlay]);
 	xlabel('$x/\lambda_c$','interpreter','latex');
 	ylabel('$y/\lambda_c$','interpreter','latex');
-	drawnow
+	%drawnow
 
 	% plot histogram
 	splitfigure([3,3],[figid+1,4],fflag,[],[],[],[],'Visible',visible);
+		pause(0.3)
 	cla();
 	plot(out.patch_size.radius,out.patch_size.pr);
 	ylabel('patch radius distribution')
-	drawnow
+	%drawnow
 
 	splitfigure([3,3],[figid+1,5],fflag,[],[],[],[],'Visible',visible);
+		pause(0.3)
 	plot(out.bhist.x,out.bhist.p)
 	title('histogram of log(biomass)');
-	drawnow
+	%drawnow
 
 	% plot coherence
 	splitfigure([3,3],[figid+1,7],fflag,[],[],[],[],'Visible',visible);
+		pause(0.3)
 	cla();
 	fx = sp.f.x;
 	fy = sp.f.y;
@@ -238,16 +257,17 @@ function rk_2d_heterogeneity_plot(rk,sp,out,figid,aniso,nkc,meta,visible)
 	title('Spectral coherence C(b,a)');
 	xlabel('k_x/k_c');
 	xlabel('k_y/k_c');
-	drawnow
+	%drawnow
 
 	if (~isempty(out.coherence_r))
 	splitfigure([3,3],[figid+1,8],fflag,[],[],[],[],'Visible',visible);
+		pause(0.3)
 	cla();
 	plot(sp.f.r/fc,out.coherence_r);
 	vline(1);
 	ylabel('C_r(a,b)');
 	xlabel('k_x/k_c');
-	drawnow
+	%drawnow
 	end
 	
 	if (0)
@@ -259,6 +279,7 @@ function rk_2d_heterogeneity_plot(rk,sp,out,figid,aniso,nkc,meta,visible)
 
 	%namedfigure(figid+3,'','Visible',visible);
 	splitfigure([2,3],[figid+2,4],fflag,[],[],[],[],'Visible',visible);
+	pause(0.3)
 	%subplot(2,2,1);
 	cla();
 	plot(t,Sc/lc(end));
@@ -268,6 +289,7 @@ function rk_2d_heterogeneity_plot(rk,sp,out,figid,aniso,nkc,meta,visible)
 
 	%subplot(2,2,2);
 	splitfigure([2,3],[figid+2,5],fflag,[],[],[],[],'Visible',visible);
+	pause(0.3)
 	cla();
 	plot(t,lc);
 	xlabel('t/day');
@@ -275,38 +297,43 @@ function rk_2d_heterogeneity_plot(rk,sp,out,figid,aniso,nkc,meta,visible)
 
 	%subplot(2,3,4);
 	splitfigure([2,3],[figid+2,6],fflag,[],[],[],[],'Visible',visible);
+		pause(0.3)
 	cla();
 	r = rms(y(:,1:end/3)-y(end,1:end/3),2)./rms(y(end,1:end/3));
 	r(:,2) = inner2outer(rms(diff(y(:,1:end/3)),2))./rms(y(end,1:end/3));
 	semilogy(t,r);
 
 	end
-
 	if (meta.pflag)
 		T = rk.T(end);
 
 		str = sprintf('vxh-%g-eyh-%g-s_a-%0.2g-R-%g-L-%d-T-%1.0e-rng-%d',rk.pmu.vx(3),rk.pmu.ey(3),rk.pss.a/rk.pmu.a,rk.pmu.R,rk.L(1),T,rk.opt.rng);		
+		pause(1);
 		pdfprint(figid*10+1,['img/rk-2d-pattern-',str,'.pdf'],ps);
 		%namedfigure(figid*10+1,'','Visible',visible);
 		%axis(10*[0,1,0,1]);
 		figure(figid*10+1);
-		drawnow();
+		%drawnow();
 		axis off
+		pause(0.3);
 		pdfprint(figid*10+1,['img/rk-2d-pattern-',str,'.png'],ps,[],'png');
 		axis on
 		xlim(10*[0,1]);
 		ylim(10*[0,1]);
-		drawnow();
+		pause(0.3);
+		%drawnow();
 		pdfprint(figid*10+1,['img/rk-2d-pattern-Lp-10-',str,'.pdf'],ps);
-		%namedfigure(figid*10+1,'','Visible',visible);
+ 		%namedfigure(figid*10+1,'','Visible',visible);
 		axis off
-		pdfprint(figid*10+1,['img/rk-2d-pattern-Lp-10-',str,'.png'],ps,[],'png');
+		pause(0.3);
+%		pdfprint(figid*10+1,['img/rk-2d-pattern-Lp-10-',str,'.png'],ps,[],'png');
 		pdfprint(figid*10+4,['img/rk-2d-correlogram-',str,'.pdf'],ps);
-		pdfprint(figid*10+7,['img/rk-2d-periodogram-',str,'.pdf'],ps);
-%		namedfigure(NaN*figid*10+3,'','Visible',visible);
-%		axis off
-%		pdfprint(NaN*figid*10+3,['img/rk-2d-periodogram-',str,'.png'],ps,[],'png');
+%		pdfprint(figid*10+7,['img/rk-2d-periodogram-',str,'.pdf'],ps);
+	%		namedfigure(NaN*figid*10+3,'','Visible',visible);
+	%		axis off
+	%		pdfprint(NaN*figid*10+3,['img/rk-2d-periodogram-',str,'.png'],ps,[],'png');
 		aspect = [];
+if (0)
 		if (aniso)
 			pdfprint(figid*10+5,['img/rk-2d-density-Sx-',str,'.pdf'],ps,aspect);
 			pdfprint(figid*10+6,['img/rk-2d-density-Sy-',str,'.pdf'],ps,aspect);
@@ -321,6 +348,7 @@ function rk_2d_heterogeneity_plot(rk,sp,out,figid,aniso,nkc,meta,visible)
 		if (rk.pss.a>0)
 			pdfprint((figid+1)*10+3,['img/rk-2d-pattern-vs-bandpass-overlap/rk-2d-pattern-vs-bandpass-overlap-',str],ps);
 		end
+end
 	end % meta.pflag
 end % rk_2d_heterogeneity_plot
 

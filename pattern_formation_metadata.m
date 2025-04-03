@@ -86,7 +86,7 @@ function meta = pattern_formation_metadata()
 	% plot options
 	meta.pflag = false;
 	meta.dflag = false;
-	meta.analyze = true;
+	meta.analyze = false;
 	meta.visible = true;
 	meta.colororder = [0,0,0; 0.9,0,0; 0,0.25,0.8];
 	meta.areacol  = [0.55,0.75,1];

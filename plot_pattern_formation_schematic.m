@@ -23,6 +23,7 @@ end
 pflag = meta.pflag;
 fflag = pflag;
 fcmap = meta.fcmap;
+fcmap = @(x) flipud(gray(x));
 ps    = meta.plotscale;
 
 % spatial extent
@@ -33,11 +34,11 @@ n = L^2;
 fc = 1;
 % maximum of density
 Sc0 = 1.0;
-Sc = 1.5;
+Sc = 1;
 % density parameters
-[par] = bandpass2d_continuous_pdf_mode2par(fc,Sc)
-[par1] = bandpass2d_continuous_pdf_mode2par(fc,Sc0)
-par = [1/par(1),par(2)];
+[par(1),par(2)]  = bandpass1dpdf_mode2par(1.55*fc,Sc/2.02)
+[par1(1),par1(2)] = bandpass1dpdf_mode2par(fc,Sc0)
+%par = [1/par(1),par(2)];
 
 % spatial axis
 x = linspace(0,L,n);
@@ -45,7 +46,7 @@ x = linspace(0,L,n);
 % reset random number generator for reproducibility
 rng(0);
 
-%[fx,fy,ffr] = fourier_axis(L*
+[fx,fy,frr] = fourier_axis_2d(L*[1,1],n*[1,1]);
 % spatial noise
 e = randn(n);
 
@@ -55,33 +56,35 @@ for idx=1:nt
 % determine densities
 switch(type_C{idx})
 case{'regular'}
-	S = bandpass2d_discrete_pdf(L*[1,1],n*[1,1],par(1),par(2));
+	%S = bandpass2d_discrete_pdf(L*[1,1],n*[1,1],par(1),par(2));
+	S2d = bandpass2dpdf(cvec(fx),rvec(fy),par(1),par(2),true);
 %	[Sr,fr] = periodogram_radial(S,L*[1,1]);
-	T = sqrt(S);
+	T = sqrt(S2d);
 	b = ifft2(T.*fft2(e));
 case{'periodic'}
 	b=generate_isotropic_pattern(fc,n*[1,1],L*[1,1],0);
-	S = fft2(b-mean(b,'all')).^2;
+	S2d = fft2(b-mean(b,'all')).^2;
 case{'irregular'}
 	% L40, n 2*L^2 0.065
 	p2 = par1(2);
 	p1 = 0.065;
 	% 1.18 0.85
 	p1 = 0.073;
-	S = lowpass2d_discrete_pdf(L*[1,1],n*[1,1],p1,p2);
+	%S2d = lowpass2d_discrete_pdf(L*[1,1],n*[1,1],p1,p2);
+	fc_ = 14;
+	p_ = 84/1.2;
+	S2d = lowpass2dpdf(cvec(fx),rvec(fy),fc_,p_);
 %	[Sr,fr] = periodogram_radial(S,L*[1,1]);
-	T = sqrt(S);
+	T = sqrt(S2d);
 	b = ifft2(T.*fft2(e));
 end
-[Sr,fr] = periodogram_radial(S,L*[1,1]);
+[Sr,fr] = periodogram_radial(S2d,L*[1,1]);
 
 splitfigure([2,3],[1,idx],fflag);
-%q = quantile(b,0.66);
 imagesc(x,x,b);
 q = quantile(b(:),[0.7,0.8]);
 caxis(q)
 axis(10*fc*[0,1,0,1])
-%axis equal
 axis square
 if (idx<3)
 	xlabel('$x/\lambda_c$','interpreter','latex');
@@ -91,9 +94,11 @@ else
 	ylabel('$y/\lambda_l$','interpreter','latex');
 end
 colormap(fcmap(256));
+q = quantile(b,[0.75],'all');
+bt = b>q;
+mean(bt(:))
 
 splitfigure([2,3],[1,idx+3],fflag);
-%plot(fr,Sr.normalized/Sr.normalized(1))
 if (idx>1)
 	plot(fr/fc,fc*Sr.normalized,'linewidth',1)
 else
@@ -101,16 +106,16 @@ else
 end
 switch (idx)
 case{1}
-	ylabel('$S/L$','interpreter','latex')
-	xlabel('$k/k_c$','interpreter','latex');
+	ylabel('$S_r/L$','interpreter','latex')
+	xlabel('$k_r/k_c$','interpreter','latex');
 	ylim([0,1+sqrt(eps)]);
 case{2}
-	ylabel('$S/\lambda_c$','interpreter','latex')
-	xlabel('$k/k_c$','interpreter','latex');
+	ylabel('$S_r/\lambda_c$','interpreter','latex')
+	xlabel('$k_r/k_c$','interpreter','latex');
 	ylim([0,Sc+0.05]);
 case{3}
-	ylabel('$S/\lambda_l$','interpreter','latex')
-	xlabel('$k/k_c$','interpreter','latex');
+	ylabel('$S_r/\lambda_l$','interpreter','latex')
+	xlabel('$k_r/k_l$','interpreter','latex');
 end
 xlim([0,3.5])
 axis square

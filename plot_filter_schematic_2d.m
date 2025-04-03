@@ -27,6 +27,8 @@ fflag = pflag;
 ps = meta.plotscale;
 fcmap = meta.fcmap;
 s = 2.5;
+preg = 1.5;
+%s = 2;
 f0 = 6/0.75;
 
 type_C = {'iso','aniso'}
@@ -65,7 +67,7 @@ for tdx=1:length(type_C)
 	switch (type)
 	case {'iso'}
 		% radal density
-		S0 = bandpass1d_continuous_pdf(fr,f0/10,1);
+		S0 = bandpass1d_continuous_pdf(fr,f0/10,preg);
 	otherwise
 		% density perpendicular to stripes 
 		%Sx = bandpass1d_continuous_pdf(fx,f0/10,1);
@@ -93,14 +95,20 @@ for tdx=1:length(type_C)
 	
 	% transfer function
 	T = sqrt(S2d);
+	% impulse response
+	IR = real(fft2(T));
+
 	% spectral noise
 	fe = fft2(e);
 	% pattern
 	b = real(ifft2(T.*fe));
 	% periodogram
 	Shat = abs(fft2(b)).^2;
+	% correlogram
+	Rhat = ifft2(Shat);
+	Rhat = Rhat/Rhat(1);
 	
-	splitfigure([2,3],[tdx,1],fflag);
+	splitfigure([2,4],[tdx,1],fflag);
 	imagesc(x/lc,x/lc,e);
 	axis equal
 	axis tight
@@ -111,24 +119,25 @@ for tdx=1:length(type_C)
 	caxis(2*[-1,1]);
 	
 	% acf
-	splitfigure([2,3],[tdx,2],fflag);
+	splitfigure([2,4],[tdx,2],fflag);
 	imagesc(x/lc,x/lc,ifftshift(R2d));
 	axis equal
 	axis tight
 	axis(s*[-1,1,-1,1]);
 	axis off
 	colormap(fcmap(256));
-	caxis([-1,1]/4)
+	%caxis([-1,1]/4)
+	caxis(quantile(R2d(:),[0.999])*[-1,1])
 	
 	% pattern
-	splitfigure([2,3],[tdx,3],fflag);
+	splitfigure([2,4],[tdx,3],fflag);
 	imagesc(x/lc,x/lc,b>quantile(b(:),pt));
 	axis equal
 	axis tight
 	axis off
 	colormap(fcmap(256));
 	
-	splitfigure([2,3],[tdx,4],fflag);
+	splitfigure([2,4],[tdx,4],fflag);
 	fehat = abs(fe).^2;
 	imagesc(fftshift(fx)./fc,fftshift(fy)/fc,fehat)
 	axis equal
@@ -138,7 +147,7 @@ for tdx=1:length(type_C)
 	caxis([0,1]*quantile(fehat(:),0.975));
 	colormap(fcmap(256));
 	
-	splitfigure([2,3],[tdx,5],fflag);
+	splitfigure([2,4],[tdx,5],fflag);
 	imagesc(fftshift(fx)/fc,fftshift(fy)/fc,ifftshift(S2d));
 	axis equal
 	axis tight
@@ -147,7 +156,7 @@ for tdx=1:length(type_C)
 	%colormap(flipud(gray))
 	colormap(fcmap(256));
 	
-	splitfigure([2,3],[tdx,6],fflag);
+	splitfigure([2,4],[tdx,6],fflag);
 	imagesc(fftshift(fx)/fc,fftshift(fy)/fc,fftshift(Shat));
 	axis equal
 	axis tight
@@ -158,6 +167,45 @@ for tdx=1:length(type_C)
 	%q = normcdf(3);
 	caxis([0,1]*quantile(Shat(:),q));
 	colormap(fcmap(256));
+
+	splitfigure([2,4],[tdx,7],fflag);
+	imagesc(fftshift(fx)/fc,fftshift(fy)/fc,fftshift(T));
+	axis equal
+	axis tight
+	axis(s*[-1,1,-1,1]);
+	axis off
+	%colormap(flipud(gray))
+	q = 1-0.25*(fc./L)^2
+	%q = normcdf(3);
+	caxis([0,1]*quantile(T(:),q));
+	colormap(fcmap(256));
+
+	splitfigure([2,4],[tdx,8],fflag);
+	imagesc(x/lc,x/lc,ifftshift((IR)));
+	axis equal
+	axis tight
+	axis(s*[-1,1,-1,1]);
+	axis off
+	colormap(fcmap(256));
+	rIR = max(IR(:)) - min(IR(:));
+	%caxis(quantile(IR(:),[0.0015,0.9995]))
+	caxis(quantile(IR(:),[0.999])*[-1,1])
+	%[min(IR(:)),max(IR(:))]);
+%-1,1]*max(IR(:)));
+	%quantile([0.05,0.95],IR(:)));
+	%[0,1]*quantile(T(:),q));
+	%caxis([-1,1]/4)
+
+	figure(100+tdx)
+%	imagesc(fftshift(Rhat));
+	imagesc(x/lc,x/lc,ifftshift(Rhat));
+	axis equal
+	axis tight
+	axis(s*[-1,1,-1,1]);
+	axis off
+	colormap(fcmap(256));
+	%caxis([-1,1]/4)
+	caxis(quantile(R2d(:),[0.999])*[-1,1])
 	
 	figure(2);
 	clf
@@ -166,12 +214,15 @@ for tdx=1:length(type_C)
 	
 	if (pflag)
 			a = 1.3;
-			pdfprint(10*tdx+1,['img/filter-2d-',type,'-heterogeneity.pdf'],ps,a);
-			pdfprint(10*tdx+2,['img/filter-2d-',type,'-acf.pdf'],ps,a);
-			pdfprint(10*tdx+3,['img/filter-2d-',type,'-pattern.pdf'],ps,a);
-			pdfprint(10*tdx+4,['img/filter-2d-',type,'-heterogeneity-p.pdf'],ps,a);
-			pdfprint(10*tdx+5,['img/filter-2d-',type,'-density.pdf'],ps,a);
-			pdfprint(10*tdx+6,['img/filter-2d-',type,'-pattern-p.pdf'],ps,a);
+%			pdfprint(10*tdx+1,['img/filter-2d-',type,'-heterogeneity.pdf'],ps,a);
+%			pdfprint(10*tdx+2,['img/filter-2d-',type,'-acf.pdf'],ps,a);
+			pdfprint(100+tdx,['img/filter-2d-',type,'-correlogram.pdf'],ps,a);
+%			pdfprint(10*tdx+3,['img/filter-2d-',type,'-pattern.pdf'],ps,a);
+%			pdfprint(10*tdx+4,['img/filter-2d-',type,'-heterogeneity-p.pdf'],ps,a);
+%			pdfprint(10*tdx+5,['img/filter-2d-',type,'-density.pdf'],ps,a);
+%			pdfprint(10*tdx+6,['img/filter-2d-',type,'-pattern-p.pdf'],ps,a);
+%			pdfprint(10*tdx+7,['img/filter-2d-',type,'-transfer-function.pdf'],ps,a);
+%			pdfprint(10*tdx+8,['img/filter-2d-',type,'-impulse-response.pdf'],ps,a);
 	end
 end % for tdx
 

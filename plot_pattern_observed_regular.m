@@ -24,10 +24,12 @@ function sp = plot_pattern_observed_regular(meta)
 	fflag = pflag;
 	ps = meta.plotscale;
 	fcmap = meta.fcmap;
+	field = 'hp';
 
 	file_C = {
 		  'patterns/anisotropic_28.26432_11.17174.png', 2.5,
-		  'patterns/isotropic_-107.150197_31.320446.png', 3.5
+		  'patterns/isotropic_-114.866787_38.385718_mercator_cropped.png', 2.5
+		  %'patterns/isotropic_-107.150197_31.320446.png', 3.5
 	}
 	C = {'bandpass','phase_drift','logn','gamma'};
 
@@ -46,20 +48,22 @@ function sp = plot_pattern_observed_regular(meta)
 %		sp(idx).b_square = sp(idx).b_square';
 %		sp(idx).b = sp(idx).b';
 		end
-		save(meta.filename.observed_patterns,'sp');
+		save(meta.filename.observed_patterns,'-v7.3','sp');
 	else
 		load(meta.filename.observed_patterns,'sp');
 	end
 
 	for idx=1:length(sp)
-	field = 'bar';
 	sp(idx).opt.scalefield = field;
 	
 	if (sp(idx).stat.isisotropic)
 		printf('Src/lc: %g\n',sp(idx).stat.fc.radial.(field)*sp(idx).stat.Sc.radial.(field));
+		printf('lc: %g\n',1./sp(idx).stat.fc.radial.(field));
 		printf('R2 %g\n',sp(idx).stat.fit.radial.bandpass.stat.goodness.r2);
 	else
 		printf('Sxc/lc: %g\n',sp(idx).stat.fc.x.(field)*sp(idx).stat.Sc.x.(field));
+		printf('Syc/lc: %g\n',sp(idx).stat.fc.x.(field)*sp(idx).stat.Sc.y.(field));
+		printf('lc: %g\n',1./sp(idx).stat.fc.x.(field));
 		printf('R2 %g\n',sp(idx).stat.fit.x.phase_drift.stat.goodness.r2);
 	end
 	printf('p-periodic %g\n',sp(idx).stat.p_periodic)
@@ -97,9 +101,9 @@ function sp = plot_pattern_observed_regular(meta)
 	else
 	%caxis([-0.0512,0.125]);
 	%caxis([-0.13,0.97]);
-	xlim([-1,1]);
-	ylim([-1,1]);
-	caxis([-0.25,1.0]);
+	xlim(2.5*[-1,1]);
+	ylim(2.5*[-1,1]);
+	caxis([-0.1,1.0]);
 	colormap(fcmap(11));
 	end
 	cbh = colorbar();
@@ -180,7 +184,7 @@ if (0)
 	else
 		splitfigure([2,3],[idx,4],fflag);
 		plot(sp(idx).f.x(fdx)/sp(idx).stat.fc.x.hp,sp(idx).S.rot.x.phase_drift(fdx)*sp(idx).stat.fc.x.hp,'linewidth',1)	
-		legend('empirical','phase-drift');
+		legend('empirical','PNI');
 	end
 	xlim(file_C{idx,2}*[0,1]);
 	axis square
@@ -237,7 +241,7 @@ else
 		pdfprint(10*idx+4,['img/',f,'-Sx.pdf'],ps);
 		pdfprint(10*idx+5,['img/',f,'-Sy.pdf'],ps);
 end
-		pdfprint(10*idx+6,['img/',f,'-Sr.pdf'],ps);
+		%pdfprint(10*idx+6,['img/',f,'-Sr.pdf'],ps);
 	end
 	end % for idx
 end

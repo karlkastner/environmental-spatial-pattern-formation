@@ -79,8 +79,10 @@ function g2 = plot_pattern_observed_irregular(meta)
 	b = b/max(b,[],'all');
 	g = graythresh(b);
 	imagesc(x*fl,y*fl,1-(b>g));
-	axis equal; axis tight; xlabel('x/\lambda_l');
-	ylabel('y/\lambda_l');
+	axis equal;
+	axis tight;
+	xlabel('Position $x/\lambda_l$','interpreter','latex');
+	ylabel('Position $y/\lambda_l$','interpreter','latex');
 	set(gca,'xtick',0:5:20);
 	set(gca,'ytick',0:5:20);
 	axis square
@@ -106,15 +108,13 @@ function g2 = plot_pattern_observed_irregular(meta)
 	imagesc(fl*(x-x(end)/2),fl*(y-y(end)/2),fftshift(R))
 	cbh=colorbar
 	title(cbh,'$\hat R$','interpreter','latex');
-	xlim(1.5*[-1,1])
-	ylim(1.5*[-1,1])
+	xlim(2.5*[-1,1])
+	ylim(2.5*[-1,1])
 	axis square
 	xlabel('Lag distance $x/\lambda_l$','interpreter','latex');
 	ylabel('Lag distance $y/\lambda_l$','interpreter','latex');
-	xlim([-1,1]);
-	ylim([-1,1]);
-	caxis([-0.3,1])
-	colormap(fcmap(10))
+	caxis([-0.11,1])
+	colormap(fcmap(11))
 	%	colormap(flipud(gray(10)))
 	
 	
@@ -122,7 +122,7 @@ function g2 = plot_pattern_observed_irregular(meta)
 	plot(fr/fl,Sr*fl,'linewidth',1);
 	xlim([0,4]);
 	xlabel('Wavenumber $k_r/k_l$','interpreter','latex');
-	ylabel('Density $S/\lambda_l$','interpreter','latex');
+	ylabel('Radial Density $S_r/\lambda_l$','interpreter','latex');
 	legend('empirical','LP-fit');
 	axis square
 	
