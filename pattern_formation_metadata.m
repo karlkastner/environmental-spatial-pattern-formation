@@ -24,67 +24,9 @@ function meta = pattern_formation_metadata()
 	meta.filename.dependencies = 'dependencies.csv';
 	meta.reload = true;	
 
-	%	
-	% parameters for example rietkerk model run
-	% and corresponding density plots
-	%
-
-	% TODO most of these values have moved to the scripts
-	% and are superfluous	
-
-	% transect length (m)
-	meta.example.L  = 8e3;
-	% grid interval (m)
-	meta.example.dx = 2;
-	% central wrequency = 1/wavelength (1/m)
-	meta.example.fc = 0.01;
-	% regularity
-	meta.example.Sc_fc = 0.67;
-	% flow velocity (~ sqrt(hill slope))
-	meta.example.vh = 10;
-	% spatial heterogeneity
-	meta.example.sd_a = 0.11;
-
-	%
-	% parameters for rietkerk series run
-	%
-
-	meta.mod2d.L  = 500;	
-	meta.mod2d.dx = 2;	
-	meta.mod2d.Ti = 1e3;
-	meta.mod2d.To = 1e4; % 5e4
-	meta.mod2d.dt = 1; % ?
-	meta.mod2d.dto = 10;
-	meta.mod2d.eh = 100;
-	meta.mod2d.vh = 0;
-
-	% transect length
-	meta.mopt.L    = 1.6e4;
-	% grid interval (m)
-	meta.mopt.dx   = 1;
-	% duration of initial run
-	meta.mopt.Ti   = 1e4;
-	% duration of second run
-	meta.mopt.To   = 2e4;
-	% output interval
-	meta.mopt.dto  = 50;
-	meta.mopt.dt   = 0.5;
-	% spatial heterogeneity
-	meta.mopt.sd_a = 0.00:0.01:0.20;
-	% surface water diffusivity
-	meta.mopt.eh   = 1;
-	% surface water velocity
-	meta.mopt.vh   = 10; %1:1:20;
-	meta.mopt.solver    = @Rietkerk.solve_split;
-
-	% recommended geomean or median as these yield consistent results for wavelength and wavenumber(frequency),
-	% 	i.e. geomean(wavelength) = 1/geomean(f_c)
-	% (arithmetic)-mean and harmonic-mean do not yield consistent results:
-	%	i.e. mean(wavelength) != 1/mean(f_c)
-	meta.mfun  = @median;
-
-	% plot options
 	meta.pflag = false;
+
+	% plot options for series runs
 	meta.dflag = false;
 	meta.analyze = false;
 	meta.visible = true;
@@ -115,5 +57,5 @@ function meta = pattern_formation_metadata()
 	meta.colormap_b = flipud(gray);
 	q = 2/3;
 	meta.fcmap = @(n) flipud(q*colormap(gray(n)) + (1-q)*colormap_vegetation(n));
-end
+end % pattern_formation_metadata
 

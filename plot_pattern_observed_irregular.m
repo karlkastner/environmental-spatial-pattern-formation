@@ -26,21 +26,20 @@ function g2 = plot_pattern_observed_irregular(meta)
 	fcmap = meta.fcmap;
 	
 	g = GeoImg();
-	g.read('img/irregular-mont-ventoux.png');
+	g.read('patterns/irregular-mont-ventoux.png');
+	% crop the image
 	n  = 100;
 	g2 = g.crop(1,400+n,935-n,1335-400-n);
-	% imagesc(g2.img); axis equal
 	b = g2.img;
 	% coordinate axes
-	x = g2.x; x = x-x(1);
-	y = g2.y; y = y-y(1);
-	L=[range(x),range(y)]
-	%s = size(b);
-	%x=0:s(1)-1;
-	%y=0:s(2)-1;
+	x = g2.x;
+	x = x-x(1);
+	y = g2.y;
+	y = y-y(1);
+	% spatial extent
+	L=[range(x),range(y)];
 	% spatial resolution
-	dx = x(2)-x(1)
-	%L = [x(end),y(end)]
+	dx = x(2)-x(1);
 	% spectral axis
 	fx = fourier_axis(g2.x);
 	fy = fourier_axis(g2.y);
@@ -67,8 +66,8 @@ function g2 = plot_pattern_observed_irregular(meta)
 	w = fr;
 	w(fdxs) = 0;
 	% fit the spectral density of a lowpass-filter
-	par=fit_spectral_density(fr,Sr,w,@lowpass2d_continuous_pdf,[1.5,1.5],'ls',0)
-	Sr(:,2) = lowpass2d_continuous_pdf(fr,par(1),par(2));
+	par=fit_spectral_density(fr,Sr,w,@lowpass1dpdf,[1.5,1.5],'ls',0)
+	Sr(:,2) = lowpass1dpdf(fr,par(1),par(2));
 	 fdx=find(Sr(nskip+1:end,2)<0.5*Sr(nskip+1,2),1,'first')+nskip;
 	 fl=fr(fdx);
 	 Sr=Sr./(sum(Sr)*(fr(2)-fr(1)));
@@ -98,7 +97,7 @@ function g2 = plot_pattern_observed_irregular(meta)
 	ylabel('Wavenumber $k_y/k_l$','interpreter','latex');
 	axis square
 	axis(3.5*[-1,1,-1,1]);
-	cbh=colorbar
+	cbh=colorbar();
 	title(cbh,'$\hat S/\lambda_l^2$','interpreter','latex');
 	%colormap(flipud(gray(20)))
 	colormap(fcmap(20));
@@ -106,7 +105,7 @@ function g2 = plot_pattern_observed_irregular(meta)
 	splitfigure([2,3],[1,3],fflag);
 	cla
 	imagesc(fl*(x-x(end)/2),fl*(y-y(end)/2),fftshift(R))
-	cbh=colorbar
+	cbh=colorbar();
 	title(cbh,'$\hat R$','interpreter','latex');
 	xlim(2.5*[-1,1])
 	ylim(2.5*[-1,1])
@@ -142,8 +141,8 @@ function g2 = plot_pattern_observed_irregular(meta)
 
 	f_50 = fl;
 	%f_50 = fc;
-	dfr  = df(1)
-	nf_test = round(0.25*f_50/dfr)
+	dfr  = df(1);
+	nf_test = round(0.25*f_50/dfr);
 	%fmsk = (frr<4*fc);
 	bmsk = [];
 	% TODO use Spatial_Pattern/analyse_grid here
@@ -153,15 +152,12 @@ function g2 = plot_pattern_observed_irregular(meta)
 					b, L,nf_test, bmsk, fmsk);
 	r2 = wcorr(fr(nskip+1:end),Sr(nskip+1:end,1),fr(nskip+1:end),Sr(nskip+1:end,2)).^2;
 
-
 	printf('Src/lc: %g\n',0); %sp(idx).stat.fc.radial.(field)*sp(idx).stat.Sc.radial.(field));
 	printf('R2 %g\n',r2); %sp(idx).stat.fit.radial.bandpass.stat.goodness.r2);
 	%printf('Sxc/lc: %g\n',sp(idx).stat.fc.x.(field)*sp(idx).stat.Sc.x.(field));
 	%printf('R2 %g\n',sp(idx).stat.fit.x.phase_drift.stat.goodness.r2);
 	printf('p-periodic %g\n',pn);
 	
-	%ylabel('Density S/\lambda_l');
-	%legend('empirical','LP-fit');
 	if (pflag)
 		pdfprint(11,'img/pattern-irregular.pdf',ps)
 		pdfprint(12,'img/pattern-irregular-Shat.pdf',ps)

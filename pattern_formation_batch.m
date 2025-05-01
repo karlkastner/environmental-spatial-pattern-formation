@@ -21,7 +21,7 @@
 %%       the run time can be cut by reducing the number of cases and resolution
 %%	 in rk_2d_heterogeneity_experiments
 %%
-%%	dependencies_determine('dependencies.csv','mat/profile-3.mat',{'mimimum_working_example'})
+%%	dependencies_determine('dependencies.csv','mat/profile-3.mat',{'pattern_formation_patch','pdfprint'})
 
 	% set to true to save fitures to files 
 	pflag = false;
@@ -30,6 +30,7 @@
 	meta.pflag = pflag;
 
 	mkdir('mat/');
+	mkdir('mat/may/');
 	mkdir('img/');
 	mkdir('lib/');
 	mkdir('lib/auxiliar');
@@ -43,17 +44,22 @@
 	};
 
 	for idx=1:size(toolbox_C,1)
-		if (~license('test',toolbox_C{idx,1})
+		if (~license('test',toolbox_C{idx,1}))
 			printf('%s is missing, execution will likely fail at a later point.\',toolbox_C{idx,2});
 		end
 	end
 	url  = 'https://raw.githubusercontent.com/karlkastner/auxiliar/master/dependencies_fetch.m';
 	dest = './lib/auxiliar/dependencies_fetch.m';
+
 	urlwrite(url,dest);
 
-	% fetch library files
+	% this line needs only to be run when packing the code
 	% dependencies_determine(meta.filename.dependencies,meta.filename.profile,{'pattern_analysis_batch','pdfprint'});
-	dependencies_fetch(meta.url,meta.filename.dependencies);
+
+	% fetch library files
+	% this line needs only to be run when the source code is downloaded
+	% from the repository without dependencies
+	% dependencies_fetch(meta.url,meta.filename.dependencies);
 
 	addpath_recursive('lib/');
 
@@ -61,81 +67,86 @@
 
 	% Figure 01 : natural regular patterns from aerial images
 	close all;
-	plot_patterns_observed_regular(meta);
+	plot_pattern_observed_regular(meta);
 
 	% Figure 01 : natural regular patterns from aerial images
 	close all;
-	plot_patterns_observed_irregular(meta);
+	plot_pattern_observed_irregular(meta);
 
-	% Figure 02
+	% Figure 02 : schematic filtering
 	close all;
-	plot_filter_schematic_2d(pflag);
+	plot_filter_schematic_2d(meta);
 
-	% Figure
+	% Figure 03 : fraction of ground covered by vegetation vs precipitation
+	close all;
+	rk_experiment_aridity_transition();
+	
+	% Figure  04 : heterogeneity map, spectrum and distribution
 	close all;
 	plot_exogenous_heterogeneity();
 
-	% Figure 03 (thresholding)
-	experiment_rk_aridity_transition();
-	
-	% Figure 03
+	% Figure 05 : irregular model
+	% Figure SI 3, 4
+	close all;
 	grazing_model_experiment();
 
-	% Figure 04, 07 : computer generated patterns, regularity, corr(a,b)
+	% Figure 06 : rietkerk model generated patterns regular isotropic
 	close all;
-	% TODO rename exp in series simulate 
-	rk_2d_heterogeneity_experiment(meta);
-	close all;
-	rk_2d_series_postprocess_aniso();
-	close all;
-	rk_2d_heterogeneity_postprocess_iso();
-	close all;
-	rk_2d_hetero_series_plot_isotropic_spectral_coherence();
+	rk_2d_heterogeneity_experiment(meta,0);
 
-	% figure 05: bandpass-like frequency response of the isotropci RK-model
+	% Figure 07a-d : pattern properties vs exogenous heterogeneity
 	close all;
-	rk_1d_frequency_response(pflag);
+	clear tab
+	rk_2d_heterogeneity_series_postprocess_isotropic();
+	
+	% Figure 07e : spectral coherence
+	close all;
+	rk_2d_heterogeneity_series_plot_isotropic_spectral_coherence();
 
-	% figure 06 : bandpass bandpass generated patterns and density
+	% figure 08: bandpass-like frequency response of the isotropci RK-model
+	close all;
+	rk_1d_frequency_response(meta);
+
+	% figure 09 : bandpass bandpass generated patterns and density
 	close all;
 	plot_bandpass_2d(meta);
 
-	% Figure 08 : phase-noise-integrating property of the anisotropic RK-model
-	close all;
-	rk_1d_phase_shift_experiment_single_bump(meta);
+	% Figure 10 : rietkerk model generated patterns regular anisotropic
+	rk_2d_heterogeneity_experiment(meta,1);
 
-	% Figure 08
+	% Figure 11 : ansisotropic pattern properties
+	close all;
+	clear tab
+	rk_2d_heterogeneity_series_postprocess_anisotropic();
+
+	% Figure 12a : phase-noise-integrating property of the anisotropic RK-model
+	close all;
+	rk_1d_experiment_phase_shift_single_bump(meta);
+
+	% Figure 12b : oscillator with phase noise through integration of heterogeneity
 	close all
 	rk_1d_experiment_phase_noise_integration(meta);
 
-	% Figure 09
-	close all
-	%phase_noise_illustration();
-	example_phase_noise();
-
-	% Figure 10 : phase-noise-integration patterns and density
+	% Figure 13 : phase-noise-integration patterns and density
 	close all;
 	plot_noisy_oscillator_2d(meta);
 
-	% Figure 11
+	% Figure 14 : schematic pattern formation through filtering
 	close all
 	plot_pattern_formation_schematic(meta);
 
-	% supplement
+	% Figure SI1 - SI2 heterogeneity modelling
 	close all
-	experiment_ou_correlation_length()
-
-	% supplement
+	experiment_heterogeneity_artefacts_2();
 	close all
-	experiment_heterogeneity_variance_vs_spatial_resolution()
-	example_exogenous_heterogeneity_artefacts();
-	plot_heterogeneity_distribution();
-
-	% supplement
+	experiment_heterogeneity_artefacts();
 	close all
-	experiment_heterogeneity_artefacts()
+	experiment_heterogeneity_correlation_length_finite_domain_size();
+	close all
+	experiment_heterogeneity_correlation_finite_spatial_resolution();
 
-	% supplement
+	% Figure SI 6 : perturbation of periodic pattern by phase nois
 	close all
 	example_phase_noise_meander_tiles();
+
 

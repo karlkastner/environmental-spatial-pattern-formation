@@ -16,7 +16,7 @@
 %
 %% plot an isotropic and an anisotropic natural pattern
 %
-function sp = plot_pattern_observed_regular(meta) 
+function sp = plot_pattern_observed_regular(meta)
 	if (nargin<1)
 		meta = pattern_formation_metadata();
 	end
@@ -30,10 +30,9 @@ function sp = plot_pattern_observed_regular(meta)
 		  'patterns/anisotropic_28.26432_11.17174.png', 2.5,
 		  'patterns/isotropic_-114.866787_38.385718_mercator_cropped.png', 2.5
 		  %'patterns/isotropic_-107.150197_31.320446.png', 3.5
-	}
-	C = {'bandpass','phase_drift','logn','gamma'};
+	};
 
-	
+
 	if (~exist(meta.filename.observed_patterns,'file') || ~meta.reload)
 		for idx=1:length(file_C)
 		sp(idx) = Spatial_Pattern();
@@ -41,7 +40,7 @@ function sp = plot_pattern_observed_regular(meta)
 		if (1==idx)
 		        sp(idx).L   = sp(idx).L([2,1]);
 			sp(idx).b = sp(idx).b';
-        		sp(idx).msk.b = sp(idx).msk.b';  
+        		sp(idx).msk.b = sp(idx).msk.b';
 		end
  		sp(idx).analyze_grid();
 		sp(idx).fit_parametric_densities();
@@ -55,16 +54,16 @@ function sp = plot_pattern_observed_regular(meta)
 
 	for idx=1:length(sp)
 	sp(idx).opt.scalefield = field;
-	
+
 	if (sp(idx).stat.isisotropic)
 		printf('Src/lc: %g\n',sp(idx).stat.fc.radial.(field)*sp(idx).stat.Sc.radial.(field));
 		printf('lc: %g\n',1./sp(idx).stat.fc.radial.(field));
 		printf('R2 %g\n',sp(idx).stat.fit.radial.bandpass.stat.goodness.r2);
 	else
-		printf('Sxc/lc: %g\n',sp(idx).stat.fc.x.(field)*sp(idx).stat.Sc.x.(field));
-		printf('Syc/lc: %g\n',sp(idx).stat.fc.x.(field)*sp(idx).stat.Sc.y.(field));
-		printf('lc: %g\n',1./sp(idx).stat.fc.x.(field));
-		printf('R2 %g\n',sp(idx).stat.fit.x.phase_drift.stat.goodness.r2);
+		printf('Sxpc/lc: %g\n',sp(idx).stat.fc.xp.(field)*sp(idx).stat.Sc.xp.(field));
+		printf('Sypc/lc: %g\n',sp(idx).stat.fc.xp.(field)*sp(idx).stat.Sc.y.(field));
+		printf('lc: %g\n',1./sp(idx).stat.fc.xp.(field));
+		printf('R2 %g\n',sp(idx).stat.fit.xp.phase_drift.stat.goodness.r2);
 	end
 	printf('p-periodic %g\n',sp(idx).stat.p_periodic)
 
@@ -92,9 +91,9 @@ function sp = plot_pattern_observed_regular(meta)
 	splitfigure([2,3],[idx,3],fflag);
 	sp(idx).R.rot.hp = sp(idx).R.rot.hp';
 	sp(idx).plot('R.rot.hp');
-	xlim([-2.5,2.5]);	
+	xlim([-2.5,2.5]);
 	ylim([-2.5,2.5]);
-	if (idx==1)	
+	if (idx==1)
 	%caxis([-0.3355,0.5]);
 	caxis([-0.4,1])
 	colormap(fcmap(14));
@@ -108,19 +107,19 @@ function sp = plot_pattern_observed_regular(meta)
 	end
 	cbh = colorbar();
 	title(cbh,'$\hat R$','interpreter','latex');
-	
+
 
 	% density along primary axis
 	splitfigure([2,3],[idx,4],fflag);
 	cla();
 	if (~sp(idx).stat.isisotropic)
-		sp(idx).plot('S.rot.x.hp','linewidth',1);
+		sp(idx).plot('S.rot.xp.hp','linewidth',1);
 		hold on
 		fdx = sp(idx).f.x>0;
 		%S = sp(idx).w.x(fdx).*sp(idx).S.rot.x.phase_drift;
 		%S = S/spectral_density_area(sp(idx).f.x(fdx),S);
 		%plot(sp(idx).f.x(fdx)/sp(idx).stat.fc.x.hp,S*sp(idx).stat.fc.x.hp,'linewidth',1);
-		sp(idx).plot('S.rot.x.phase_drift','linewidth',1);
+		sp(idx).plot('S.rot.xp.phase_drift','linewidth',1);
 		legend('empirical','PNI-fit');
 	else
 		sp(idx).plot('S.radial.hp','linewidth',1);
@@ -150,12 +149,13 @@ function sp = plot_pattern_observed_regular(meta)
 	end
 	axis square
 if (0)
+	leg_C = {'bandpass','phase_drift','logn','gamma'};
 	splitfigure([2,3],[idx+20,2],fflag);
 	cla
 	plot(NaN,NaN);
 	hold on
 
-	fdx = sp(idx).f.x>=0;	
+	fdx = sp(idx).f.x>=0;
 
 	if (~pflag)
 
@@ -183,7 +183,7 @@ if (0)
 	legend(leg_C{:})
 	else
 		splitfigure([2,3],[idx,4],fflag);
-		plot(sp(idx).f.x(fdx)/sp(idx).stat.fc.x.hp,sp(idx).S.rot.x.phase_drift(fdx)*sp(idx).stat.fc.x.hp,'linewidth',1)	
+		plot(sp(idx).f.x(fdx)/sp(idx).stat.fc.x.hp,sp(idx).S.rot.x.phase_drift(fdx)*sp(idx).stat.fc.x.hp,'linewidth',1)
 		legend('empirical','PNI');
 	end
 	xlim(file_C{idx,2}*[0,1]);
@@ -192,7 +192,7 @@ if (0)
 	splitfigure([2,3],[idx,5],fflag);
 	plot(sp(idx).f.y(fdx)/sp(idx).stat.fc.x.hp,sp(idx).S.rot.y.phase_drift_parallel(fdx)*sp(idx).stat.fc.x.hp,'linewidth',1)
 	xlim([0,2.5]);
-	axis square		
+	axis square
 
 	% radial density
 %	splitfigure([2,3],[idx,6],fflag);
@@ -234,14 +234,13 @@ end
 		pdfprint(10*idx+1,['img/',f,'-pattern.pdf'],ps);
 		pdfprint(10*idx+2,['img/',f,'-S2d.pdf'],ps);
 		pdfprint(10*idx+3,['img/',f,'-correlogram.pdf'],ps);
-if (sp(idx).stat.isisotropic)
+	if (sp(idx).stat.isisotropic)
 		pdfprint(10*idx+4,['img/',f,'-Sr.pdf'],ps);
 		pdfprint(10*idx+5,['img/',f,'-Sa.pdf'],ps);
-else
+	else
 		pdfprint(10*idx+4,['img/',f,'-Sx.pdf'],ps);
 		pdfprint(10*idx+5,['img/',f,'-Sy.pdf'],ps);
-end
-		%pdfprint(10*idx+6,['img/',f,'-Sr.pdf'],ps);
+	end
 	end
 	end % for idx
 end

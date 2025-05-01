@@ -18,7 +18,7 @@
 function [sp, out] = rk_2d_heterogeneity_analyze(t,z,rk,aniso,p_noise,scalefield)
 	out = struct();
 
-	n_oversample = 1;
+	m_oversample = 1;
 	nf = 30; % for correlation
 	nf_ = 7;
 
@@ -34,12 +34,12 @@ function [sp, out] = rk_2d_heterogeneity_analyze(t,z,rk,aniso,p_noise,scalefield
 		b = b';
 
 		sp = Spatial_Pattern();
-		sp.source.S = rk.psS.a; 
+		sp.source.S = rk.psS.a;
 		% TODO no magic numbers
 		sp.opt.rmax = 100;
 		sp.opt.scalefield = scalefield;
 		sp.b = b;
-		sp.L = n_oversample*rk.L;
+		sp.L = m_oversample*rk.L;
 		sp.opt.weight = false;
 		sp.analyze_grid();
 		sp.fit_parametric_densities();
@@ -57,13 +57,13 @@ function [sp, out] = rk_2d_heterogeneity_analyze(t,z,rk,aniso,p_noise,scalefield
 		a = rk.p.a;
 		% since we transposed the pattern, we have to transpose a as well
 		a = reshape(a,rk.nx)';
-		% a = repmat(a,n_oversample,n_oversample);
-		[~,~,f.r] = fourier_axis_2d(n_oversample*rk.L,n_oversample*rk.nx);
+		% a = repmat(a,m_oversample,n_oversample);
+		[~,~,f.r] = fourier_axis_2d(m_oversample*rk.L,n_oversample*rk.nx);
 		% TODO deconvolve the noise spectrum and refit
 		par = sp.stat.fit.radial.bandpass.par;
 		Sr_ = bandpass1d_continuous_pdf(f.r,par(1),par(2),true);
 		Sr_ = Sr_.*f.r.^p_noise;
-		Tr_ = sqrt(Sr_);	
+		Tr_ = sqrt(Sr_);
 		out.b_bp        = real(ifft2(Tr_.*fft2(a)));
 		q               = quantile(out.b_bp(:),out.p_thresh);
 		out.b_bp_thresh = out.b_bp > q;
@@ -84,7 +84,7 @@ function [sp, out] = rk_2d_heterogeneity_analyze(t,z,rk,aniso,p_noise,scalefield
 		cvi  = std(infiltration,[],'all')./mean(infiltration,'all');
 		out.relstd = cva_./cvi;
 	else
-		out.relstd = NaN; 
+		out.relstd = NaN;
 		out.b_bp = [];
 		out.b_bp_thresh = [];
 		out.b_overlay = [];
@@ -92,13 +92,13 @@ function [sp, out] = rk_2d_heterogeneity_analyze(t,z,rk,aniso,p_noise,scalefield
 		out.coherence_2d = [];
 		out.coherence_r = [];
 	end
-	
+
 		% histogram of biomass
 		b_ = b;
 		b_(b<=0) = sqrt(eps);
 		lb = log(b_(:));
 		nbin = round(sqrt(length(lb)));
-		q = quantile(lb,[1/nbin,1-1/nbin]);		
+		q = quantile(lb,[1/nbin,1-1/nbin]);
 		out.bhist.x = linspace(min(lb),max(lb),nbin);
 		%[mi,max(log(b(:)))];innerspace(0,3*mean(b(:)),50);
 		[out.bhist.c] = hist(lb(:),out.bhist.x);
@@ -118,7 +118,7 @@ function [sp, out] = rk_2d_heterogeneity_analyze(t,z,rk,aniso,p_noise,scalefield
 	[out.Si,out.Ri] = sp.resample_functions(out.xi,out.fi);
 
 
-if (0)	
+if (0)
 
 	l1c = 1./sp.stat.fc.rr.hp;
 
@@ -130,7 +130,7 @@ if (0)
 	S1.r(:,idx) = sp.S.radial.hat;
 
 	% periodictity test result
-	pt(idx,1) = sp.stat.p_periodic; 
+	pt(idx,1) = sp.stat.p_periodic;
 
 	if (aniso)
 		Sc(idx,1) = sp.stat.Sc.x.(sp.opt.scalefield);
@@ -157,7 +157,7 @@ if (0)
 	end
 
 end % if 0
- 
+
 		save(filename,'-v7.3','sp','out');
 	end % if ~exist filename
 end % analyze

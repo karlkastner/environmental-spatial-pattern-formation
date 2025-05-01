@@ -26,12 +26,12 @@ pflag = meta.pflag;
 fflag = pflag;
 ps = meta.plotscale;
 fcmap = meta.fcmap;
+
 s = 2.5;
 preg = 1.5;
-%s = 2;
 f0 = 6/0.75;
 
-type_C = {'iso','aniso'}
+type_C = {'iso','aniso'};
 
 for tdx=1:length(type_C)
 	type = type_C{tdx};
@@ -56,9 +56,10 @@ for tdx=1:length(type_C)
 	otherwise
 		pt = (0.5+0.5)/2;
 	end
+	% spatial axis
 	x = linspace(-L/2,L/2,n)';
+	% spectral axis
 	[fx,fy,fr] = fourier_axis_2d(L*[1,1],n*[1,1]);
-	axis tight
 	
 	% density
 	% reset random number generator for reproducibility
@@ -67,14 +68,14 @@ for tdx=1:length(type_C)
 	switch (type)
 	case {'iso'}
 		% radal density
-		S0 = bandpass1d_continuous_pdf(fr,f0/10,preg);
+		S0 = bandpass1dpdf(fr,f0/10,preg);
 	otherwise
 		% density perpendicular to stripes 
 		%Sx = bandpass1d_continuous_pdf(fx,f0/10,1);
 		Sx = phase_drift_pdf(fx,f0/10,0.5);
 		% density parallel to stripes
 		Sy = phase_drift_parallel_pdf(fx,2.5);
-			%Sy = normpdf(fx,0,0.7*f0/10);
+		%Sy = normpdf(fx,0,0.7*f0/10);
 		%Sy = exppdf(abs(fx),15/f0);
 		% 2D density
 		S0 = cvec(Sy)*rvec(Sx);
@@ -163,7 +164,7 @@ for tdx=1:length(type_C)
 	axis(s*[-1,1,-1,1]);
 	axis off
 	%colormap(flipud(gray))
-	q = 1-0.25*(fc./L)^2
+	q = 1-0.25*(fc./L)^2;
 	%q = normcdf(3);
 	caxis([0,1]*quantile(Shat(:),q));
 	colormap(fcmap(256));
@@ -175,7 +176,7 @@ for tdx=1:length(type_C)
 	axis(s*[-1,1,-1,1]);
 	axis off
 	%colormap(flipud(gray))
-	q = 1-0.25*(fc./L)^2
+	q = 1-0.25*(fc./L)^2;
 	%q = normcdf(3);
 	caxis([0,1]*quantile(T(:),q));
 	colormap(fcmap(256));
@@ -188,16 +189,9 @@ for tdx=1:length(type_C)
 	axis off
 	colormap(fcmap(256));
 	rIR = max(IR(:)) - min(IR(:));
-	%caxis(quantile(IR(:),[0.0015,0.9995]))
 	caxis(quantile(IR(:),[0.999])*[-1,1])
-	%[min(IR(:)),max(IR(:))]);
-%-1,1]*max(IR(:)));
-	%quantile([0.05,0.95],IR(:)));
-	%[0,1]*quantile(T(:),q));
-	%caxis([-1,1]/4)
 
 	figure(100+tdx)
-%	imagesc(fftshift(Rhat));
 	imagesc(x/lc,x/lc,ifftshift(Rhat));
 	axis equal
 	axis tight
@@ -205,24 +199,27 @@ for tdx=1:length(type_C)
 	axis off
 	colormap(fcmap(256));
 	%caxis([-1,1]/4)
-	caxis(quantile(R2d(:),[0.999])*[-1,1])
+	caxis(quantile(R2d(:),[0.999])*[-1,1]);
 	
 	figure(2);
 	clf
-	%splitfigure(2,2,1)
-	df=1/L;S1d = S2d(1,:); S1d = 2*S1d/(sum(S1d)*df); plot(fx/fc,S1d*fc); xlim([0,2.5]);
+	df=1/L;
+	S1d = S2d(1,:);
+	S1d = 2*S1d/(sum(S1d)*df);
+	plot(fx/fc,S1d*fc);
+	xlim([0,2.5]);
 	
 	if (pflag)
-			a = 1.3;
-%			pdfprint(10*tdx+1,['img/filter-2d-',type,'-heterogeneity.pdf'],ps,a);
-%			pdfprint(10*tdx+2,['img/filter-2d-',type,'-acf.pdf'],ps,a);
-			pdfprint(100+tdx,['img/filter-2d-',type,'-correlogram.pdf'],ps,a);
-%			pdfprint(10*tdx+3,['img/filter-2d-',type,'-pattern.pdf'],ps,a);
-%			pdfprint(10*tdx+4,['img/filter-2d-',type,'-heterogeneity-p.pdf'],ps,a);
-%			pdfprint(10*tdx+5,['img/filter-2d-',type,'-density.pdf'],ps,a);
-%			pdfprint(10*tdx+6,['img/filter-2d-',type,'-pattern-p.pdf'],ps,a);
-%			pdfprint(10*tdx+7,['img/filter-2d-',type,'-transfer-function.pdf'],ps,a);
-%			pdfprint(10*tdx+8,['img/filter-2d-',type,'-impulse-response.pdf'],ps,a);
+		a = 1.3;
+		pdfprint(10*tdx+1,['img/filter-2d-',type,'-heterogeneity.pdf'],ps,a);
+		pdfprint(10*tdx+2,['img/filter-2d-',type,'-acf.pdf'],ps,a);
+		pdfprint(100+tdx,['img/filter-2d-',type,'-correlogram.pdf'],ps,a);
+		pdfprint(10*tdx+3,['img/filter-2d-',type,'-pattern.pdf'],ps,a);
+		pdfprint(10*tdx+4,['img/filter-2d-',type,'-heterogeneity-p.pdf'],ps,a);
+		pdfprint(10*tdx+5,['img/filter-2d-',type,'-density.pdf'],ps,a);
+		pdfprint(10*tdx+6,['img/filter-2d-',type,'-pattern-p.pdf'],ps,a);
+		pdfprint(10*tdx+7,['img/filter-2d-',type,'-transfer-function.pdf'],ps,a);
+		pdfprint(10*tdx+8,['img/filter-2d-',type,'-impulse-response.pdf'],ps,a);
 	end
 end % for tdx
 

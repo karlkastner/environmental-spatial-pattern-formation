@@ -29,13 +29,11 @@ function plot_phase_noise_integration_2d(meta)
 	linewidth = 1.5;
 
 	mode = 's2d';
-%	mode = 'exact';
 
 	% length of domain
 	L   = 20*[1,1];
 	% spectral resolution
 	df  = 1./L;
-
 	% characteristic frequency fc = 1/\lambda_c
 	fc=1;
 	% number of grid points
@@ -59,13 +57,11 @@ function plot_phase_noise_integration_2d(meta)
 	% spatial axes
 	x = linspace(0,L(1),n(1));
 	y = linspace(0,L(2),n(2));
-	% frequency axes
+	% spectral axes
 	fx = fourier_axis(L(1),(n(1)-1)+1);
 	fxp = fx(1:n(2)/2);
 	fy = fourier_axis(L(2),(n(2)-1)+1);
 	fyp = fy(1:n(2)/2);
-	
-%	mSxpcfun = @(sx) max(spectral_density_brownian_phase(fx_,f0,sx,true)); 
 	
 	ns = [length(Sxpc_fc),length(Scy_fc)];
 	
@@ -153,7 +149,7 @@ function plot_phase_noise_integration_2d(meta)
 	end % for idx
 	
 	% 1D density perpendicular to stripes
-	splitfigure([2,2],[4,1],fflag)
+	splitfigure([2,2],[4,1],fflag);
 	cla
 	plot(fxp/fc,Sxp*fc,'linewidth',linewidth)
 if (0)
@@ -177,24 +173,15 @@ end
 	end
 	set(gca,'colororder',col);
 
-%	splitfigure([2,2],[5,1],fflag)
-%	cla
-%	plot(fx/fc,Sx*fc,'linewidth',linewidth)
-	
 	% 1D density parallel to stripes
-	splitfigure([2,2],[4,2],fflag)
-	cla()
+	splitfigure([2,2],[4,2],fflag);
+	cla();
 	plot(fyp/fc,Syp*fc,'linewidth',linewidth)
-%	fdx=(fy>=0);
-%	df = fy(2)-fy(1)
-%	sum(Syp)*df(2)
-%	sum(Syp(fdx,:))*df(2)
-%pause
-if (0)
+	if (0)
 	hold on
 	set(gca,'colororderindex',1)
 	plot(fx/fc,hatSyp*fc,'*','linewidth',linewidth)
-end
+	end
 	xlim([0,2])
 	xlabel('Wavenumber $k_y/k_c$','interpreter','latex');
 	ylabel('Density $S_{y^+}/\lambda_c$','interpreter','latex');
@@ -238,13 +225,11 @@ end
 			end % for jdx
 		end % for idx
 		s = [];
-		aspect = 1
-if (1)
+		aspect = 1;
 		pdfprint(41,'img/phase-noise-integration-2d-density-Sx.pdf',ps,aspect);
 		pdfprint(42,'img/phase-noise-integration-2d-density-Sy.pdf',ps,aspect);
 		pdfprint(43,'img/phase-noise-integration-2d-autocorrelation-Rx.pdf',ps,aspect);
 		pdfprint(44,'img/phase-noise-integration-2d-autocorrelation-Ry.pdf',ps,aspect);
-end
 	end % if pflag
-end % plot_phase_noise_integration_2d
+end % plot_noisy_oscillator_2d
 

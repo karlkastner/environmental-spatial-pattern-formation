@@ -21,15 +21,22 @@
 	% reload values of intermediate time steps
 	param.opt.loadfinal = false;
 	% domain size
-	param.L  = 1024*[1,1];
+	param.L  = 256*[1,1];
 	% number of grid cells
 	param.nx = param.L(1)*[1,1]/2;
 	% final time
-	param.T  = 365*100;
+	param.T  = 365*10;
 	% time step
-	param.opt.dt = 1;
+	param.opt.adapt_time_step=1;
+	param.opt.dt           = 1/400;
+	param.opt.dt_min       = 1/400;
+	param.opt.dt_max       = 0.5;
+	param.opt.outer_abstol = 1e-4;
+	param.opt.outer_reltol = 1e-2;
+	param.opt.dt_max_scale_up   = sqrt(2);
+	param.opt.dt_min_scale_down = 0;
 	% keep time step constant
-	param.opt.adapt_time_step = 0;
+	%param.opt.adapt_time_step = 0;
 	% time step for writing output files
 	param.opt.dto = 365;
 	% data type of output file
@@ -38,16 +45,34 @@
 	param.opt.path_str = 'mat/';
 	% solve using a splitting scheme
 	param.opt.solver = 'solve_split';
-	param.opt.inner_solver = 'step_advect_diffuse_implicit_q_fft';
+	param.opt.inner_solver = 'step_advect_diffuse_spectral';
 	
 	% random initial condition
 	%param.initial_condition = 'obj.random_state()';
 	param.initial_condition = 'obj.ic_single_patch()';
-	rk = Rietkerk(param);
+	rad = Rietkerk(param);
 
-	[t,y]	  = rk.run();
+	[t,y]	  = rad.run();
 
-	[b,w,h] = rk.extract2(y(end,:));
+	[b,w,h] = rad.extract2(y(end,:));
 
+	subplot(2,3,1)
 	imagesc(double(b))
 
+	% analysis
+	sp = Spatial_Pattern();
+	sp.opt.suppress_low_frequency_components = 0;
+	sp.L = rad.L;
+	sp.b = b;
+	
+	% sp.source = a;
+	sp.analyze_grid();
+	%sp.fit_parametric_densities();
+	% sp(kdx).predict_pattern();
+	
+	subplot(2,3,2);
+	sp.plot('S.radial.con');
+
+	subplot(2,3,3);
+	sp.plot('R.radial.con');
+	

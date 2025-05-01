@@ -22,20 +22,20 @@ function [rk,bb,c] = rk_1d_frequency_response(meta)
 	end
 	pflag = meta.pflag;
 	fflag = pflag;
-	%ps    = 3.5;
 	ps    = meta.plotscale;
 
 	scale = 8;
-	
-	% length of domain
+
+	% spatial extent
 	L = 16000*scale;
 	% spatial resolution
 	dx = 1;
 	% number of grid points
 	nx = round(L./dx);
+	% mean of infiltration coefficient
 	a0 = 0.2;
-	% relative magnitude of spatial variation of the bare soild infiltration 
-	s_a = 0.05;
+	% relative magnitude of spatial variation of the bare soild infiltration
+	cv_a = 0.05;
 	% window size
 	nwin = 2*round(800*sqrt(scale))+1;
 	nwh = (nwin-1)/2;
@@ -43,7 +43,7 @@ function [rk,bb,c] = rk_1d_frequency_response(meta)
 	% final time
 	To  = 4e2;
 	% output time step
-	dto = 20; 
+	dto = 20;
 	% time step
 	dt  = 0.5;
 
@@ -58,8 +58,8 @@ function [rk,bb,c] = rk_1d_frequency_response(meta)
 	F_ = scale*[0;cumsum(f)];
 	F = mid(F_);
 
-	% phi = omega*x <-> omega = unwrapp(phi) / x 
-	
+	% phi = omega*x <-> omega = unwrapp(phi) / x
+
 	% interpolate to grid
 	n  = 0.5*nx+1;
 	n_ = length(F);
@@ -72,9 +72,9 @@ function [rk,bb,c] = rk_1d_frequency_response(meta)
 	% when we only increase the frequency, then there will be a jump at the end of the domain
 	% so we ramp it up and down to make it symmetric
 	ea = [ea;-flipud(ea(2:end-1))];
-	a = a0*(1 + s_a*ea);  
+	a = a0*(1 + cv_a*ea);
 	dF_dx_ = [dF_dx;-flipud(dF_dx(2:end-1,:))];
-	
+
 	% model parameters
 	param        = struct();
 	% advection
@@ -116,9 +116,9 @@ function [rk,bb,c] = rk_1d_frequency_response(meta)
 	y = single(y);
 	[bb,ww,hh] = rk.extract1(y);
 	b = bb(end,:)';
-	
-	%ax = plotyy(rk.x,[bb(end,:)'/(2*rms(bb(end,:))),0.5*(1+(rk.pmu.a-a0)/(s_a*a0))],rk.x,ff)
-	
+
+	%ax = plotyy(rk.x,[bb(end,:)'/(2*rms(bb(end,:))),0.5*(1+(rk.pmu.a-a0)/(cv_a*a0))],rk.x,ff)
+
 	% periodically extend, as the first and last window exceed the range
 	b = [b;b;b];
 	a = [a;a;a];
@@ -149,7 +149,7 @@ function [rk,bb,c] = rk_1d_frequency_response(meta)
 	cla
 	plot(rk.x,[bb(end,:)'/(2*rms(bb(end,:))),0.5*(1+ea)]);
 	%set(gca,'colororder',{'k','r'})
-	set(gca,'colororder',[0,0,0;1 0 0])  
+	set(gca,'colororder',[0,0,0;1 0 0])
 	yyaxis right
 	cla
 	plot(rk.x,dF_dx_);
@@ -175,13 +175,13 @@ function [rk,bb,c] = rk_1d_frequency_response(meta)
 		pbaspect([3/4,1,1])
 	end
 
-	% plot spectrum	
+	% plot spectrum
 	splitfigure([2,3],[1,3],fflag);
-	plot(fx/(fc+sqrt(eps)),S*(fc+sqrt(eps)));  
+	plot(fx/(fc+sqrt(eps)),S*(fc+sqrt(eps)));
 	xlim([0,3.5]); %+sqrt(eps))]);
 	xlabel('Wavenumber $k_a/k_c$','interpreter','latex');
 	ylabel('S/\lambda_c');
-	title(num2str(fc))	
+	title(num2str(fc))
 	drawnow
 
 	% plot parts of pattern
@@ -210,13 +210,13 @@ function [rk,bb,c] = rk_1d_frequency_response(meta)
 		else
 			set(ax(1),'yticklabel',[]);
 		end
-		%text(ax(1),-2+dt(idx) + 0.1,2.2 - 0.025,sprintf('$k_a=%g\\cdot{k_c}, R^2=%0.2f$',f0(idx),r2_f0(idx)),'interpreter','latex'); 
-		text(ax(1),-2+dt(idx) + 0.1,2.2 - 0.025,sprintf('$k_a=%g\\cdot{k_c}$',f0(idx)),'interpreter','latex'); 
+		%text(ax(1),-2+dt(idx) + 0.1,2.2 - 0.025,sprintf('$k_a=%g\\cdot{k_c}, R^2=%0.2f$',f0(idx),r2_f0(idx)),'interpreter','latex');
+		text(ax(1),-2+dt(idx) + 0.1,2.2 - 0.025,sprintf('$k_a=%g\\cdot{k_c}$',f0(idx)),'interpreter','latex');
 		ax(1).YColor = [0,0,0.7];
-		set(ax(1),'colororder',[0,0,0.7;0.8,0,0]) 
+		set(ax(1),'colororder',[0,0,0.7;0.8,0,0])
 		%axis(ax(1),'square')
 		pbaspect(ax(1),[3/4,1,1])
-		drawnow		
+		drawnow
 
 		yyaxis right
 		drawnow
@@ -224,7 +224,7 @@ function [rk,bb,c] = rk_1d_frequency_response(meta)
 		cla(ax(2))
 		plot( (rk.x-x(mdx)+d(idx))*fc,rk.pmu.a/mean(rk.pmu.a),'linewidth',1);
 		hold on
-		yr = 0.95+s_a*bb(end,:)'/(rms(bb(end,:)));
+		yr = 0.95+cv_a*bb(end,:)'/(rms(bb(end,:)));
 		plot( (rk.x-x(mdx)+d(idx))*fc,yr,'--','color',[0,0,0.8],'linewidth',1);
 		linkaxes(ax,'off');
 %		yyaxis left
@@ -240,11 +240,11 @@ function [rk,bb,c] = rk_1d_frequency_response(meta)
 		%ylim(ax(2), (min(rk.pmu.a) + [-sqrt(eps),1.25*range(rk.pmu.a)])/mean(rk.pmu.a));
 
 		xlim(ax(2),2*[-1,1]);
-		ylim(ax(2), 1+[-(s_a+sqrt(eps)),+1.3*s_a]);
+		ylim(ax(2), 1+[-(cv_a+sqrt(eps)),+1.3*cv_a]);
 		set(ax(2),'ytick',[0.95,1,1.05])
-		set(ax(2),'colororder',[0.8,0,0;0,0,0.7]) 
+		set(ax(2),'colororder',[0.8,0,0;0,0,0.7])
 		ax(1).YColor = [0.8,0,0];
-		%ylim(ax(2), 1+[-(s_a+sqrt(eps)),+1.1*s_a]);
+		%ylim(ax(2), 1+[-(cv_a+sqrt(eps)),+1.1*cv_a]);
 		if (idx==3)
 			ylabel(ax(2),'Infiltration Coefficient $a/\bar a$','interpreter','latex')
 		else
@@ -255,12 +255,12 @@ function [rk,bb,c] = rk_1d_frequency_response(meta)
 		pbaspect(ax(2),[3/4,1,1])
 		drawnow
 	end
-	
+
 	if (pflag)
 		pdfprint(12,'img/rk-frequency-response-corr-a-b.pdf',ps);
 		for idx=1:3
 			pdfprint(13+idx,['img/rk-frequency-response-fa-',num2str(f0(idx)),'.pdf'],ps);
-		end	
+		end
 	end
 end % rk_bandpass_similarity
 

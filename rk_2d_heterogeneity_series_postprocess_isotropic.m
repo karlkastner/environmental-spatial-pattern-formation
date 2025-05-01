@@ -12,9 +12,14 @@ else
 	markersize = 5;
 end
 
+mat_filename = 'mat/pattern-formation-statistic-isotropic.mat';
+
+% correlation length
 theta = [256];
+% pattern types
 label = {'spotted','labyrinthine','gapped'};
-R_ = [0.8,1,1.15]
+% corresponding rainfall levels.
+R_ = [0.8,1,1.15];
 clear sp_a; 
 
 for idx=1:3
@@ -23,248 +28,246 @@ for idx=1:3
 	fh.Visible = false;
 end
 
-if (1) %~exist('tab','var'))
-
-for tdx=1:length(theta)
-
-for jdx=1:length(R_)
-
-folder = sprintf('mat/server/vxh-0-eyh-100-R-%g-psl-%g-L-1024-1024-T-50000-seed-0/',R_(jdx),theta(tdx));
-
-file_C = dir([folder,'/*-final.mat']);
-tab{jdx,tdx} = table();
-
-bb = NaN(1024,1024,51);
-for idx=1:length(file_C)
-disp([jdx,idx]);
-
-f = [file_C(idx).folder,'/',file_C(idx).name];
-disp(f)
-analysis_str = [f(1:end-10),'-analyzed.mat'];
-%sprintf('mat/server/vxh-0-eyh-100-R-%g-psl-%g-L-1024-1024-T-50000-seed-0/*final.mat',R_(jdx),theta(tdx));
-
-%if (exist(f,'file'))
-clear rad sp y
-%try
-load(f);
-tab{jdx,tdx}.cva(idx) = rad.pss.a/rad.pmu.a;
-tab{jdx,tdx}.name{idx} = f;
-if (~isempty(y))
-[b,w,h] = rad.extract2(y(:,2));
-bb(:,:,idx) = b;
-tab{jdx,tdx}.b(idx) = mean(b,'all');
-%$f
-%[idx,rms(rad.pss.a),rms(y),rms(b,'all'),rms(bb(:,:,idx),'all')]
+if (exist(mat_filename,'file'))
+	load(mat_filename);
 else
-%	idx
-	tab{jdx,tdx}.b(idx) = NaN;
-end % else of isemtpy(y)
-
-if (mean(b,'all')>0)
-
-if (isfield(rad.p,'a') && ~isscalar(rad.p.a))
-	a = rad.p.a;
-	a = reshape(a,rad.nx);
-	Sa = rad.psS.a;
-	Sa = max(0,real(Sa));
-	kmax = 2;
-
-ie = rad.infiltration_enhancement(flat(b));
-infiltration = flat(a).*rad.infiltration_enhancement(flat(b)).*flat(h);
-s2a = var(a,[],'all');
-s2i = var(infiltration,[],'all');
-mui = mean(infiltration,'all');
-mua = mean(a,'all');
-bara = rad.pmu.a;
-infiltration_ = flat(bara.*rad.infiltration_enhancement(b)).*flat(h);
-s2i_ = var(infiltration_);
-%mui_ = mean(infiltration);
-%infiltration = infiltration.*flat(h);
-%cva_ = std(rad.p.a,[],'all')./mean(rad.p.a,'all');
-%cvi  = std(infiltration,[],'all')./mean(infiltration,'all');
-%tab{jdx,tdx}.relstd(idx) = cva_./cvi;
-tab{jdx,tdx}.relstd(idx) = sqrt(s2a)/mua/(sqrt(s2i)/mui);
-tab{jdx,tdx}.relstd_(idx) = (s2i - s2i_)/s2i;
-tab{jdx,tdx}.corr_a_I(idx) = corr(a(:),infiltration(:));
-tab{jdx,tdx}.corr_h_I(idx) = corr(h(:),infiltration(:));
-tab{jdx,tdx}.corr_ie_I(idx) = corr(ie(:),infiltration(:));
-tab{jdx,tdx}.bmax(idx) = max(b,[],'all');
-a_ =a(:);
-ie_ = ie(:);
-h_ = h(:);
-b_ = b(:);
-infiltration_ = infiltration(:);
-A = [ones(prod(rad.nx),1),(a_-mean(a_))/std(a_),(ie_-mean(ie_))/std(ie_),(h_-mean(h_))/std(h_)];
-c = A \ ((infiltration_-mean(infiltration_))/std(infiltration_))
-ccc(idx,1:4,jdx) = c;
-tab{jdx,tdx}.fraction_exogenous(idx) = c(2);
-
-A = [ones(prod(rad.nx),1),(a_-mean(a_))/std(a_),(b_-mean(b_))/std(b_),(h_-mean(h_))/std(h_)];
-c = A \ ((infiltration_-mean(infiltration_))/std(infiltration_))
-ccc_(idx,1:4,jdx) = c;
-%(s2i - s2i_)/s2i;
-%sqrt(s2a)/mua/(sqrt(s2i)/mui);
-
-else
-	ccc(idx,:,jdx) = NaN;
-	ccc_(idx,:,jdx) = NaN;
-	tab{jdx,tdx}.relstd(idx) = NaN;
-	tab{jdx,tdx}.relstd_(idx) = 0;
-	kmax = 1;
-end
- 
-
-clear sp
-ff = dir(f);
-fa = dir(analysis_str);
-
-if (exist(analysis_str,'file') && (fa.datenum>ff.datenum))
-	load(analysis_str,'sp');
-else
-	disp('reanalyzing');
-	for kdx=1 %:kmax
 	
-	sp(kdx) = Spatial_Pattern();
-	sp.opt.suppress_low_frequency_components = 0;
-	sp(kdx).L = rad.L;
-	sp(kdx).b = b;
-	if (~isscalar(a))
-		sp(kdx).source = a;
-		% sp(kdx).source.S = Sa;
-	end % if
-	sp(kdx).analyze_grid();
-	sp(kdx).fit_parametric_densities();
-	sp(kdx).predict_pattern();
-	end % for kdx
-	save(analysis_str,'sp');
-end % else of if exist analyze_str
-
-
-tab{jdx,tdx}.runtime(idx) = out.runtime(end);
-tab{jdx,tdx}.n_step(idx) = out.n_step(end);
-tab{jdx,tdx}.adapt_time_step(idx) = rad.opt.adapt_time_step;
-tab{jdx,tdx}.r2_bp(idx)  = sp(1).stat.fit.radial.bandpass.stat.goodness.r2;
-tab{jdx,tdx}.p_periodic(idx)  = sp(1).stat.p_periodic;
-tab{jdx,tdx}.Sc_hat(idx) = sp(1).stat.Sc.radial.hat;
-tab{jdx,tdx}.fc_hat(idx) = sp(1).stat.fc.radial.hat;
-tab{jdx,tdx}.Sc_con(idx) = sp(1).stat.Sc.radial.con;
-tab{jdx,tdx}.fc_con(idx) = sp(1).stat.fc.radial.con;
-tab{jdx,tdx}.Sc_bar(idx) = sp(1).stat.Sc.radial.bar;
-tab{jdx,tdx}.fc_bar(idx) = sp(1).stat.fc.radial.bar;
-tab{jdx,tdx}.Sc_bp(idx)  = sp(1).stat.Sc.radial.bandpass;
-tab{jdx,tdx}.fc_bp(idx)  = sp(1).stat.fc.radial.bandpass;
-tab{jdx,tdx}.R(idx)      = rad.pmu.R;
-tab{jdx,tdx}.coherence(idx) = sp(1).stat.coherence.radial;
-
-c = corr(a(:),b(:));
-tab{jdx,tdx}.r2ab(idx)  = c.^2;
-for kdx=1 %:kmax
-if (0)
-S = interp1(sp(kdx).f.r,sp(kdx).S.fit.radial.bandpass,sp(kdx).f.rr,'linear',0);
-T = sqrt(S);
-b_ = ifft2(T.*fft2(a));
-
-bt=graythresh_scaled(b(:));
-bt = b>bt;
-q=quantile(b_(:),1-mean(bt(:)));
-bt_=b_>q;
-
-ct = corr(bt_(:),bt(:));
-c  = sign_to_pearson(ct);
-if (1==kdx)
-	tab{jdx,tdx}.r2fwb(idx) = c.^2;
-else
-	tab{jdx,tdx}.r2fab(idx) = c.^2;
-end % else of if kdx == 1
-end
-
-tab{jdx,tdx}.r2fwb(idx) = NaN;
-tab{jdx,tdx}.r2fab(idx) = sp.stat.fit.b_.lin_thresh.r2;
-
-end % for kdx
-end % if mean(b)>0
-
-if (0)
-btt = bt + 2*bt_;
-figure(jdx)
-subplot(6,9,idx);
-imagesc(btt);
-axis equal
-axis square;
-end % if 0
-
-if (0)
-figure(100+jdx)
-subplot(6,9,idx);
-imagesc(bt_);
-axis equal
-axis square;
-end % if 0
-
-if (0)
-subplot(2,2,1);
-imagesc(bt);
-subplot(2,2,2);
-imagesc(bt_);
-end % if 0
-
-sp_a(idx,jdx) = sp;
-
-end % for idx
-
-[tab{jdx,tdx},sdx] = sortrows(tab{jdx,tdx},'cva');
-bb_ = bb;
-bb = bb_(:,:,sdx);
-ccc(:,:,jdx) = ccc(sdx,:,jdx);
-ccc_(:,:,jdx) = ccc_(sdx,:,jdx);
-sp_a(:,jdx) = sp_a(sdx,jdx);
-
-% quick fix
-tab{jdx,tdx}.coherence = tab{jdx,tdx}.coherence /1024;
-tab{jdx,tdx}.Scr = arrayfun(@(x) x.stat.Sc.radial.bandpass,sp_a);
-tab{jdx,tdx}.fcr = arrayfun(@(x) x.stat.fc.radial.bandpass,sp_a);
-tab{jdx,tdx}.regr = tab{jdx,tdx}.Scr./tab{jdx,tdx}.fcr;
-tab{jdx,tdx}.r2Sr = arrayfun(@(x) x.stat.fit.radial.bandpass.stat.goodness.r2,sp_a);
-tab{jdx,tdx}.p_periodic = arrayfun(@(x) x.stat.p_periodic,sp_a);
-
-%set(0,'CurrentFigure',jdx)
-%id = round(100*tab{jdx,tdx}.cva/0.2);
-for idx=1:length(file_C)
-%fdx = find(id == idx)
-%if (~isempty(fdx))
-try
-subplot(6,9,idx);
-imagesc(bb(:,:,idx));
-axis equal
-axis square;
-catch e
-e
-end % catch of try
-end % for idx file_C (sa)
-
-%end
-
-% TODO compute and migration rate
-% TODO compute and write fraction of exogenous heterogeneity
-tabw{jdx,tdx} = [tab{jdx,tdx}(:,'cva'),...
-        tab{jdx,tdx}(:,'Scr'), ...
-	tab{jdx,tdx}(:,'fcr'), ...
-	tab{jdx,tdx}(:,'regr'), ...
-	tab{jdx,tdx}(:,'coherence'), ...
-	tab{jdx,tdx}(:,'r2Sr'), ...
-	tab{jdx,tdx}(:,'fraction_exogenous') ...
-];
-tabw{jdx,tdx} = round(tabw{jdx,tdx},3,'significant');
-writetable(tabw{jdx,tdx},[folder,'/rietkerk-',label{jdx},'.csv']);
-writetable(tabw{jdx,tdx},['output/rietkerk-',label{jdx},'.csv']);
-
-end % for jdx % R 
-
-end % for tdx
-
-save('mat/pattern-formation-statistics-quick.mat','tab','ccc','ccc_'); 
-else
-	load('mat/pattern-formation-statistics-quick.mat')
+	for tdx=1:length(theta)
+		for jdx=1:length(R_)
+			
+			folder = sprintf('mat/server/vxh-0-eyh-100-R-%g-psl-%g-L-1024-1024-T-50000-seed-0/',R_(jdx),theta(tdx));
+			
+			file_C = dir([folder,'/*-final.mat']);
+			tab{jdx,tdx} = table();
+			
+			bb = NaN(1024,1024,51);
+			for idx=1:length(file_C)
+				disp([jdx,idx]);
+				
+				f = [file_C(idx).folder,'/',file_C(idx).name];
+				disp(f)
+				analysis_str = [f(1:end-10),'-analyzed.mat'];
+				%sprintf('mat/server/vxh-0-eyh-100-R-%g-psl-%g-L-1024-1024-T-50000-seed-0/*final.mat',R_(jdx),theta(tdx));
+				
+				%if (exist(f,'file'))
+				clear rad sp y
+				%try
+				load(f);
+				tab{jdx,tdx}.cva(idx) = rad.pss.a/rad.pmu.a;
+				tab{jdx,tdx}.name{idx} = f;
+				if (~isempty(y))
+				[b,w,h] = rad.extract2(y(:,2));
+				bb(:,:,idx) = b;
+				tab{jdx,tdx}.b(idx) = mean(b,'all');
+				%$f
+				%[idx,rms(rad.pss.a),rms(y),rms(b,'all'),rms(bb(:,:,idx),'all')]
+				else
+				%	idx
+					tab{jdx,tdx}.b(idx) = NaN;
+				end % else of isemtpy(y)
+				
+				if (mean(b,'all')>0)
+				
+				if (isfield(rad.p,'a') && ~isscalar(rad.p.a))
+					a = rad.p.a;
+					a = reshape(a,rad.nx);
+					Sa = rad.psS.a;
+					Sa = max(0,real(Sa));
+					kmax = 2;
+				
+				ie = rad.infiltration_enhancement(flat(b));
+				infiltration = flat(a).*rad.infiltration_enhancement(flat(b)).*flat(h);
+				s2a = var(a,[],'all');
+				s2i = var(infiltration,[],'all');
+				mui = mean(infiltration,'all');
+				mua = mean(a,'all');
+				bara = rad.pmu.a;
+				infiltration_ = flat(bara.*rad.infiltration_enhancement(b)).*flat(h);
+				s2i_ = var(infiltration_);
+				%mui_ = mean(infiltration);
+				%infiltration = infiltration.*flat(h);
+				%cva_ = std(rad.p.a,[],'all')./mean(rad.p.a,'all');
+				%cvi  = std(infiltration,[],'all')./mean(infiltration,'all');
+				%tab{jdx,tdx}.relstd(idx) = cva_./cvi;
+				tab{jdx,tdx}.relstd(idx) = sqrt(s2a)/mua/(sqrt(s2i)/mui);
+				tab{jdx,tdx}.relstd_(idx) = (s2i - s2i_)/s2i;
+				tab{jdx,tdx}.corr_a_I(idx) = corr(a(:),infiltration(:));
+				tab{jdx,tdx}.corr_h_I(idx) = corr(h(:),infiltration(:));
+				tab{jdx,tdx}.corr_ie_I(idx) = corr(ie(:),infiltration(:));
+				tab{jdx,tdx}.bmax(idx) = max(b,[],'all');
+				a_ =a(:);
+				ie_ = ie(:);
+				h_ = h(:);
+				b_ = b(:);
+				infiltration_ = infiltration(:);
+				A = [ones(prod(rad.nx),1),(a_-mean(a_))/std(a_),(ie_-mean(ie_))/std(ie_),(h_-mean(h_))/std(h_)];
+				c = A \ ((infiltration_-mean(infiltration_))/std(infiltration_));
+				ccc(idx,1:4,jdx) = c;
+				tab{jdx,tdx}.fraction_exogenous(idx) = c(2);
+				
+				A = [ones(prod(rad.nx),1),(a_-mean(a_))/std(a_),(b_-mean(b_))/std(b_),(h_-mean(h_))/std(h_)];
+				c = A \ ((infiltration_-mean(infiltration_))/std(infiltration_));
+				ccc_(idx,1:4,jdx) = c;
+				%(s2i - s2i_)/s2i;
+				%sqrt(s2a)/mua/(sqrt(s2i)/mui);
+				
+				else
+					ccc(idx,:,jdx) = NaN;
+					ccc_(idx,:,jdx) = NaN;
+					tab{jdx,tdx}.relstd(idx) = NaN;
+					tab{jdx,tdx}.relstd_(idx) = 0;
+					kmax = 1;
+				end
+				 
+				
+				clear sp
+				ff = dir(f);
+				fa = dir(analysis_str);
+				
+				if (exist(analysis_str,'file') && (fa.datenum>ff.datenum))
+					load(analysis_str,'sp');
+				else
+					disp('reanalyzing');
+					for kdx=1 %:kmax
+					
+					sp(kdx) = Spatial_Pattern();
+					sp.opt.suppress_low_frequency_components = 0;
+					sp(kdx).L = rad.L;
+					sp(kdx).b = b;
+					if (~isscalar(a))
+						sp(kdx).source = a;
+						% sp(kdx).source.S = Sa;
+					end % if
+					sp(kdx).analyze_grid();
+					sp(kdx).fit_parametric_densities();
+					sp(kdx).predict_pattern();
+					end % for kdx
+					save(analysis_str,'sp');
+				end % else of if exist analyze_str
+				
+				
+				tab{jdx,tdx}.runtime(idx) = out.runtime(end);
+				tab{jdx,tdx}.n_step(idx) = out.n_step(end);
+				tab{jdx,tdx}.adapt_time_step(idx) = rad.opt.adapt_time_step;
+				tab{jdx,tdx}.r2_bp(idx)  = sp(1).stat.fit.radial.bandpass.stat.goodness.r2;
+				tab{jdx,tdx}.p_periodic(idx)  = sp(1).stat.p_periodic;
+				tab{jdx,tdx}.Sc_hat(idx) = sp(1).stat.Sc.radial.hat;
+				tab{jdx,tdx}.fc_hat(idx) = sp(1).stat.fc.radial.hat;
+				tab{jdx,tdx}.Sc_con(idx) = sp(1).stat.Sc.radial.con;
+				tab{jdx,tdx}.fc_con(idx) = sp(1).stat.fc.radial.con;
+				tab{jdx,tdx}.Sc_bar(idx) = sp(1).stat.Sc.radial.bar;
+				tab{jdx,tdx}.fc_bar(idx) = sp(1).stat.fc.radial.bar;
+				tab{jdx,tdx}.Sc_bp(idx)  = sp(1).stat.Sc.radial.bandpass;
+				tab{jdx,tdx}.fc_bp(idx)  = sp(1).stat.fc.radial.bandpass;
+				tab{jdx,tdx}.R(idx)      = rad.pmu.R;
+				tab{jdx,tdx}.coherence(idx) = sp(1).stat.coherence.radial;
+				
+				c = corr(a(:),b(:));
+				tab{jdx,tdx}.r2ab(idx)  = c.^2;
+				for kdx=1 %:kmax
+				if (0)
+				S = interp1(sp(kdx).f.r,sp(kdx).S.fit.radial.bandpass,sp(kdx).f.rr,'linear',0);
+				T = sqrt(S);
+				b_ = ifft2(T.*fft2(a));
+				
+				bt=graythresh_scaled(b(:));
+				bt = b>bt;
+				q=quantile(b_(:),1-mean(bt(:)));
+				bt_=b_>q;
+				
+				ct = corr(bt_(:),bt(:));
+				c  = sign_to_pearson(ct);
+				if (1==kdx)
+					tab{jdx,tdx}.r2fwb(idx) = c.^2;
+				else
+					tab{jdx,tdx}.r2fab(idx) = c.^2;
+				end % else of if kdx == 1
+				end
+				
+				tab{jdx,tdx}.r2fwb(idx) = NaN;
+				tab{jdx,tdx}.r2fab(idx) = sp.stat.fit.b_.lin_thresh.r2;
+				
+				end % for kdx
+				end % if mean(b)>0
+				
+				if (0)
+				btt = bt + 2*bt_;
+				figure(jdx)
+				subplot(6,9,idx);
+				imagesc(btt);
+				axis equal
+				axis square;
+				end % if 0
+				
+				if (0)
+				figure(100+jdx)
+				subplot(6,9,idx);
+				imagesc(bt_);
+				axis equal
+				axis square;
+				end % if 0
+				
+				if (0)
+				subplot(2,2,1);
+				imagesc(bt);
+				subplot(2,2,2);
+				imagesc(bt_);
+				end % if 0
+				
+				sp_a(idx,jdx) = sp;
+				
+			end % for idx
+			
+			[tab{jdx,tdx},sdx] = sortrows(tab{jdx,tdx},'cva');
+			bb_ = bb;
+			bb = bb_(:,:,sdx);
+			ccc(:,:,jdx) = ccc(sdx,:,jdx);
+			ccc_(:,:,jdx) = ccc_(sdx,:,jdx);
+			sp_a(:,jdx) = sp_a(sdx,jdx);
+			
+			% quick fix
+			tab{jdx,tdx}.coherence = tab{jdx,tdx}.coherence /1024;
+			tab{jdx,tdx}.Scr = arrayfun(@(x) x.stat.Sc.radial.bandpass,sp_a);
+			tab{jdx,tdx}.fcr = arrayfun(@(x) x.stat.fc.radial.bandpass,sp_a);
+			tab{jdx,tdx}.regr = tab{jdx,tdx}.Scr./tab{jdx,tdx}.fcr;
+			tab{jdx,tdx}.r2Sr = arrayfun(@(x) x.stat.fit.radial.bandpass.stat.goodness.r2,sp_a);
+			tab{jdx,tdx}.p_periodic = arrayfun(@(x) x.stat.p_periodic,sp_a);
+			
+			%set(0,'CurrentFigure',jdx)
+			%id = round(100*tab{jdx,tdx}.cva/0.2);
+			for idx=1:length(file_C)
+			%fdx = find(id == idx)
+			%if (~isempty(fdx))
+			try
+			subplot(6,9,idx);
+			imagesc(bb(:,:,idx));
+			axis equal
+			axis square;
+			catch e
+			e
+			end % catch of try
+			end % for idx file_C (sa)
+			
+			%end
+			
+			% TODO compute and migration rate
+			% TODO compute and write fraction of exogenous heterogeneity
+			tabw{jdx,tdx} = [tab{jdx,tdx}(:,'cva'),...
+			        tab{jdx,tdx}(:,'Scr'), ...
+				tab{jdx,tdx}(:,'fcr'), ...
+				tab{jdx,tdx}(:,'regr'), ...
+				tab{jdx,tdx}(:,'coherence'), ...
+				tab{jdx,tdx}(:,'r2Sr'), ...
+				tab{jdx,tdx}(:,'fraction_exogenous') ...
+			];
+			tabw{jdx,tdx} = round(tabw{jdx,tdx},3,'significant');
+			writetable(tabw{jdx,tdx},[folder,'/rietkerk-',label{jdx},'.csv']);
+			writetable(tabw{jdx,tdx},['output/rietkerk-',label{jdx},'.csv']);
+		
+		end % for jdx % R 
+	end % for tdx
+	
+	save(mat_filename,'tab','ccc','ccc_'); 
 end % if (0,1)
 
 for idx=1:3
